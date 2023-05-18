@@ -13,3 +13,7 @@ Depends:
 RoxygenNote: 7.2.3
 Imports: 
     data.table
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

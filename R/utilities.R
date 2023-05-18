@@ -24,7 +24,7 @@ clean_names = function(x, type = 'first'){
   x = gsub("  ", " ", x)
   x = gsub("[[:punct:]]|[[:space:]]", " ", x)
 
-  toupper(x)
+  trimws(toupper(x))
 
 
 }

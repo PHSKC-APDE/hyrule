@@ -6,7 +6,7 @@
 #' @param middle_name. character identifying the column with middle initial
 #' @param zip character. Default is NULL. Column that includes ZIP code data
 #' @export
-#' @importFrom data.table setDT tstrsplit
+#' @importFrom data.table setDT tstrsplit year month mday
 #'
 prep_data_for_linkage = function(d, first_name, last_name, dob, middle_name = NULL, zip = NULL){
 
@@ -23,10 +23,11 @@ prep_data_for_linkage = function(d, first_name, last_name, dob, middle_name = NU
   # Date of Birth
   ## clean date of birth
   stopifnot(is.Date(d[['dob']]))
+  d[, paste0('dob_', c('year', 'month', 'day')) := list(year(dob), month(dob), mday(dob))]
 
   ## dob switch
   d[, dobswitch := as.Date(paste0(mday(dob), '-',month(dob), '-', year(dob)), '%m-%d-%Y')]
-
+  d[, paste0('dobswitch_', c('year', 'month', 'day')) := list(year(dobswitch), month(dobswitch), mday(dobswitch))]
 
   # Names
   ## clean names
@@ -41,6 +42,10 @@ prep_data_for_linkage = function(d, first_name, last_name, dob, middle_name = NU
 
   d = cbind(d, fns[, .SD, .SDcols = intersect(paste0('fn_', 1:8), names(fns))])
   d = cbind(d, lns[, .SD, .SDcols = intersect(paste0('ln_', 1:8), names(lns))])
+
+  ## name, no splits
+  d[, first_name_noblank := gsub(' ', '', first_name)]
+  d[, last_name_noblank := gsub(' ', '', last_name)]
 
   ## first initial
   d[, first_initial := substr(first_name, 1,1)]

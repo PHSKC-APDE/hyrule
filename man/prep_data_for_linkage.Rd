@@ -10,9 +10,7 @@ prep_data_for_linkage(
   last_name,
   dob,
   middle_name = NULL,
-  zip = NULL,
-  gender = NULL,
-  id = NULL
+  zip = NULL
 )
 }
 \arguments{
@@ -25,10 +23,6 @@ prep_data_for_linkage(
 \item{dob}{character. Identifies the column with date of birth}
 
 \item{zip}{character. Default is NULL. Column that includes ZIP code data}
-
-\item{gender}{character. Default is NULL, column that include gender data}
-
-\item{id}{character. Optional specification of a column to be carried through as a row id}
 
 \item{middle_name.}{character identifying the column with middle initial}
 }
