@@ -164,6 +164,10 @@ compute_variables = function(input){
         cn_cos := stringdist(cn1, cn2, 'cosine', q = 3 )]
   input[is.na(cn_cos), cn_cos := 1]
   
+  # flags for identical daymonth
+  input[, daymonth := as.integer(mday(dob1) == mday(dob2) & month(dob1) == month(dob2))]
+  input[is.na(daymonth), daymonth := 0]
+  
   return(input)
 }
 train = compute_variables(train)
@@ -214,14 +218,94 @@ test[, ismatch := as.integer(sid1==sid2)]
 
 ## Model Fitting
 
+### fastLink
+
+```{r, warning=FALSE}
+library('fastLink')
+
+# Standard approach is block on year, fastlink on first,last, and dob parts
+# block on year of birth
+# try without year of birth blocking since there are not that many records
+# borrowed from threadr package since fastLink is noisey as hell
+quiet <- function(x) {
+  sink(tempfile())
+  on.exit(sink())
+  invisible(force(x))
+}
+
+
+quiet(link <- fastLink(
+    dfA = d1c,
+    dfB = d2c,
+    varnames = c('first_name_noblank', 'last_name_noblank', 
+                 'dob_day', 'dob_month', 'dob_year'),
+    stringdist.match = c('first_name_noblank', 'last_name_noblank'),
+    partial.match = c('first_name_noblank', 'last_name_noblank'),
+    dedupe.matches = TRUE,
+    n.cores = 1
+  ))
+
+
+  
+  # matchy matchy
+res = data.table(mid1 = d1c[link$matches$inds.a, id],
+                 mid2= d2c[link$matches$inds.b, id])
+
+res = merge(res, d1c[, .(si1 = simulant_id, id)], all.x = T, by.x = 'mid1', by.y = 'id')
+res = merge(res, d2c[, .(si2 = simulant_id, id)], all.x = T, by.x = 'mid2', by.y = 'id')
+
+# number of correct matches over all found matches
+cm = round(100*nrow(res[si1 == si2])/nrow(res))
+
+# all possible matched data
+mdat = merge(
+  d1c[, .(simulant_id, fn1 = first_name_noblank, 
+          ln1 = last_name_noblank, dob1 = dob, id1 = id)],
+  d2c[, .(simulant_id, fn2 = first_name_noblank, 
+          ln2 = last_name_noblank, dob2 = dob, id2 = id)], by = 'simulant_id')
+
+# number of correct matches over all "TRUE" matches
+tm = round(100 * nrow(res[si1==si2])/ nrow(mdat))
+
+```
+
+fastLink found `r nrow(res)` matches out of a total of `r nrow(mdat)` matches. Of the matches identified, `r cm` of them were correct.
+
 ### Simple glm
 
 ```{r model-fit}
 
 # start with a logistic regression
-m1 = glm(ismatch ~ dob_ham + mis_dob + sex_disagree + fn_cos2 + fn_jw + ln_cos2 + ln_jw + cn_cos, data = train, family = 'binomial')
+m1 = glm(ismatch ~ dob_ham + mis_dob + sex_disagree + fn_cos2 + fn_jw + ln_cos2 + ln_jw + cn_cos + daymonth, data = train, family = 'binomial')
 
 # initial predictions
-p1 = predict(m1, test,type = 'response' )
+p1 = predict(m1, test,type = 'response')
+test[, p1 := p1]
+test[, p1bin := round(p1)]
 
+tsum = test[ismatch == 1 | p1bin == 1, .N, keyby = .(ismatch, p1bin)]
+tsum[, .(`True Match` = ismatch, `Pred Match` = p1bin, N)]
+
+knitr::kable(tsum)
 ```
+
+### SVM
+
+```{r}
+library('e1071')
+
+# default svm
+m2 = svm(ismatch ~ dob_ham + mis_dob + sex_disagree + fn_cos2 + fn_jw + ln_cos2 + ln_jw + cn_cos + daymonth, data = train, type ='C-classification')
+
+# initial predictions
+p2 = predict(m2, test,type = 'response')
+test[, p2 := p2]
+test[, p2bin := round(p2)]
+
+tsum = test[ismatch == 1 | p2bin == 1, .N, keyby = .(ismatch, p2bin)]
+tsum[, .(`True Match` = ismatch, `Pred Match` = p1bin, N)]
+
+knitr::kable(tsum)
+```
+
+### xgboost
