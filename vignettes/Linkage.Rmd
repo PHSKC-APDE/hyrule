@@ -70,7 +70,7 @@ d1train = d1c[id %in% train1]
 d2train = d2c[id %in% train2]
 
              
-knitr::kable(head(d2c))
+# knitr::kable(head(d2c))
 ```
 
 ## Create training dataset
@@ -247,7 +247,7 @@ quiet(link <- fastLink(
 
 
   
-  # matchy matchy
+# matchy matchy
 res = data.table(mid1 = d1c[link$matches$inds.a, id],
                  mid2= d2c[link$matches$inds.b, id])
 
@@ -267,9 +267,16 @@ mdat = merge(
 # number of correct matches over all "TRUE" matches
 tm = round(100 * nrow(res[si1==si2])/ nrow(mdat))
 
+# limited to test simulants
+test2 = copy(test[, .(sid1, sid2, ismatch, id1, id2)])
+test2 = merge(test2, res[, .(id1 =mid1, id2 = mid2, match = 1)], all.x = T, by = c('id1', 'id2'))
+test2 = test2[ismatch == 1 | !is.na(match)]
+
 ```
 
-fastLink found `r nrow(res)` matches out of a total of `r nrow(mdat)` matches. Of the matches identified, `r cm` of them were correct.
+fastLink found `r nrow(res)` matches out of a total (test and train) of `r nrow(mdat)` matches. Of the matches identified, `r cm`% of them were correct.
+
+Within the matches in the test dataset, `r test2[is.na(match) & ismatch == 1,.N]` were missed.
 
 ### Simple glm
 
@@ -284,7 +291,7 @@ test[, p1 := p1]
 test[, p1bin := round(p1)]
 
 tsum = test[ismatch == 1 | p1bin == 1, .N, keyby = .(ismatch, p1bin)]
-tsum[, .(`True Match` = ismatch, `Pred Match` = p1bin, N)]
+tsum = tsum[, .(`True Match` = ismatch, `Pred Match` = p1bin, N)]
 
 knitr::kable(tsum)
 ```
@@ -294,18 +301,76 @@ knitr::kable(tsum)
 ```{r}
 library('e1071')
 
-# default svm
-m2 = svm(ismatch ~ dob_ham + mis_dob + sex_disagree + fn_cos2 + fn_jw + ln_cos2 + ln_jw + cn_cos + daymonth, data = train, type ='C-classification')
+# The full SVM takes too long
+# use the insample predictions from the GLM to remove some of the "easier"
+# calls that the glm can make
+train[, insamp_glm := predict(m1, train, type = 'response')]
 
-# initial predictions
-p2 = predict(m2, test,type = 'response')
-test[, p2 := p2]
-test[, p2bin := round(p2)]
+# remove all the extremely low probability stuff (>= 1/1000)
+train_hard = train[insamp_glm>=.0001 & insamp_glm <=.9999]
+
+# default svm
+m2 = svm(ismatch ~ dob_ham + mis_dob + sex_disagree + fn_cos2 + fn_jw + ln_cos2 + ln_jw + cn_cos + daymonth, data = train_hard, type ='C-classification')
+
+# Predict the ones that the lm didn't get super easily
+test[, p2bin := p1bin]
+#p1>=.0001 & p1<=.9999
+test[p1>=.0001 & p1<=.9999, p2bin := as.numeric(as.character(predict(m2, .SD))), .SDcols = names(coef(m1))[-1]]
 
 tsum = test[ismatch == 1 | p2bin == 1, .N, keyby = .(ismatch, p2bin)]
-tsum[, .(`True Match` = ismatch, `Pred Match` = p1bin, N)]
+tsum = tsum[, .(`True Match` = ismatch, `Pred Match` = p2bin, N)]
 
 knitr::kable(tsum)
 ```
 
+### randomForest
+
+```{r, warning = FALSE}
+library('ranger')
+
+m3 = ranger(ismatch ~ dob_ham + mis_dob + sex_disagree + fn_cos2 + fn_jw + ln_cos2 + ln_jw + cn_cos + daymonth, data = train_hard, num.trees = 1000)
+
+
+# Predict the ones that the lm didn't get super easily
+test[, p3bin := p1bin]
+# p1>=.0001 & p1<=.9999
+test[p1>=.0001 & p1<=.9999, p3bin := round(predict(m3, .SD)$predictions), .SDcols = names(coef(m1))[-1]]
+
+tsum = test[ismatch == 1 | p3bin == 1, .N, keyby = .(ismatch, p3bin)]
+tsum = tsum[, .(`True Match` = ismatch, `Pred Match` = p3bin, N)]
+
+knitr::kable(tsum)
+
+```
+
 ### xgboost
+
+```{r}
+library('xgboost')
+train_hard_mat = model.matrix(~ dob_ham + mis_dob + sex_disagree + fn_cos2 + fn_jw + ln_cos2 + ln_jw + cn_cos + daymonth, train_hard)
+train_hard_mat = train_hard_mat[,-1]
+m4 = xgboost(data = train_hard_mat, label = train_hard$ismatch,
+             objective = "binary:logistic", nrounds = 1000, verbose = 0)
+
+test_mat = model.matrix(~ dob_ham + mis_dob + sex_disagree + fn_cos2 + fn_jw + ln_cos2 + ln_jw + cn_cos + daymonth, test[p1>=.0001 & p1<=.9999])
+test_mat = test_mat[,-1]
+
+tpreds = predict(m4, test_mat)
+test[, p4bin := p1bin]
+test[p1>=.0001 & p1<=.9999, p4bin := round(tpreds)]
+
+tsum = test[ismatch == 1 | p4bin == 1, .N, keyby = .(ismatch, p4bin)]
+tsum = tsum[, .(`True Match` = ismatch, `Pred Match` = p4bin, N)]
+
+knitr::kable(tsum)
+
+
+```
+
+### Summary
+
+```{r}
+r = test[, .N, keyby= .(ismatch, glm = p1bin, svm = p2bin, rf = p3bin, xgb = p4bin)]
+r[, Nmods := glm + svm + rf + xgb]
+knitr::kable(r)
+```
