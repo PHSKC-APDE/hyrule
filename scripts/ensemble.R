@@ -7,9 +7,9 @@ library('mgcv')
 library('glmnet')
 
 # Code largely adapted from the linkage vignette ----
-ntrain = 6500
+ntrain = 7500
 bounds = c(.0001, .9999)
-theform = ismatch ~ dob_ham + mis_dob + sex_disagree +
+theform = ismatch ~ dob_ham + mis_dob  + # sex_disagree
   fn_cos2 + fn_jw + ln_cos2 + ln_jw + cn_cos + daymonth
 # Load the data
 ## keep only a subset of the columns ----
@@ -243,10 +243,14 @@ strain[, .N, keyby = .(ismatch, stack_bin)]
 test[, stage1 := predict(screen, test, type = 'response')]
 pcols = names(coef(screen)[-1])
 
-test[stage1 >= .0001 & stage1<.999, svm := as.numeric(as.character(predict(mods$svm, .SD))), .SDcols = pcols]
-test[stage1 >= .0001 & stage1<.999, rf := predict(mods$rf, .SD)$predictions, .SDcols = pcols]
+test[stage1 >= bounds[1] & stage1<bounds[2], svm := as.numeric(as.character(predict(mods$svm, .SD))), .SDcols = pcols]
+test[stage1 >= bounds[1] & stage1<bounds[2], rf := predict(mods$rf, .SD)$predictions, .SDcols = pcols]
 test_mat = model.matrix(theform, test)[, -1]
-test[stage1 >= .0001 & stage1<.999, xg := predict(xgb.load.raw(mods$xg), test_mat[.I,])]
-test[stage1 >= .0001 & stage1<.999, final := predict(stacker, .SD, type = 'response')]
+test[stage1 >= bounds[1] & stage1<bounds[2], xg := predict(xgb.load.raw(mods$xg), test_mat[.I,])]
+test[stage1 >= bounds[1] & stage1<bounds[2], final := predict(stacker, .SD, type = 'response')]
+test[is.na(final), final := stage1]
+test[, final_bin := round(final)]
+test[, .N, keyby = .(final_bin, ismatch)]
+
 # save the models
-saveRDS(list(stacker = stacker, mods), 'mods.rds')
+saveRDS(list(stage1 = screen, stage2 = mods, stage3 = stacker), 'mods.rds')
