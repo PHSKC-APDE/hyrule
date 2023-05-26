@@ -8,9 +8,9 @@ library('glmnet')
 
 # Code largely adapted from the linkage vignette ----
 ntrain = 7500
-bounds = c(.0001, .9999)
+bounds = c(.01, .99)
 theform = ismatch ~ dob_ham + mis_dob  + # sex_disagree
-  fn_cos2 + fn_jw + ln_cos2 + ln_jw + cn_cos + daymonth
+  fn_cos2 + fn_jw + ln_cos2 + ln_jw + cn_cos + daymonth +ln_sx + fn_sx
 # Load the data
 ## keep only a subset of the columns ----
 kcols = c('simulant_id', 'first_name', 'middle_initial', 'last_name', 'date_of_birth', 'sex')
@@ -74,59 +74,8 @@ train = merge(train, d2train[, .(sex2 = sex,
                                  ln2 = last_name_noblank,
                                  dob2 = dob,
                                  id2 = id)], by = 'id2')
-compute_variables = function(input){
-  # Hamming distance
-  ham = function(x,y) stringdist(as.character(x), as.character(y), 'hamming')
 
-  # Hamming distance of DOB
-  input[, dob_ham := ham(dob1, dob2)]
-  input[, mis_dob := as.integer(is.na(dob_ham))]
-  input[, mean_dob_ham := mean(dob_ham, na.rm= T)]
-  input[mis_dob == 1, dob_ham := mean_dob_ham]
-
-  # do the sex designations disagree
-  input[, sex_disagree := as.integer(sex1 != sex2)]
-  input[is.na(sex_disagree), sex_disagree := 0]
-
-  # first name distances
-  ## cosine bigram
-  input[!is.na(fn1) & !is.na(fn2),
-        fn_cos2 := stringdist(fn1, fn2,method = 'cosine',
-                              q = ifelse(nchar(fn1) <2 | nchar(fn2) <2,1,2))]
-  input[is.na(fn_cos2), fn_cos2 := 1]
-
-  ## jaro-winkler
-  input[!is.na(fn1) & !is.na(fn2),
-        fn_jw := stringdist(fn1, fn2,method = 'jw', p = .1)]
-  input[is.na(fn_jw), fn_jw := 1]
-
-
-  # last name differences
-  ## cosine bigram
-  input[!is.na(ln1) & !is.na(ln2),
-        ln_cos2 := stringdist(ln1, ln2,method = 'cosine',
-                              q = ifelse(nchar(ln1) <2 | nchar(ln2) <2,1,2))]
-  input[is.na(ln_cos2), ln_cos2 := 1]
-
-  ## jaro-winkler
-  input[!is.na(ln1) & !is.na(ln2),
-        ln_jw := stringdist(ln1, ln2,method = 'jw', p = .1)]
-  input[is.na(ln_jw), ln_jw := 1]
-
-  # combined name trigram cosine
-  input[, cn1 := paste0(fn1,ln1)]
-  input[, cn2 := paste0(fn2, ln2)]
-  input[!is.na(cn1) | !is.na(cn2),
-        cn_cos := stringdist(cn1, cn2, 'cosine', q = 3 )]
-  input[is.na(cn_cos), cn_cos := 1]
-
-  # flags for identical daymonth
-  input[, daymonth := as.integer(mday(dob1) == mday(dob2) & month(dob1) == month(dob2))]
-  input[is.na(daymonth), daymonth := 0]
-
-  return(input)
-}
-train = compute_variables(train)
+train = hyrule::compute_variables(train)
 
 # make the training dataset ----
 train = merge(train, d1train[, .(id1 = id, sid1 = simulant_id)], by = 'id1')
@@ -151,7 +100,7 @@ test = merge(test, d2test[, .(sex2 = sex,
                               ln2 = last_name_noblank,
                               dob2 = dob,
                               id2 = id)], by = 'id2')
-test = compute_variables(test)
+test = hyrule::compute_variables(test)
 
 # "truth"
 test = merge(test, d1test[, .(id1 = id, sid1 = simulant_id)], by = 'id1')
