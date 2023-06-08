@@ -5,10 +5,11 @@
 #' @param dob character. Identifies the column with date of birth
 #' @param middle_name. character identifying the column with middle initial
 #' @param zip character. Default is NULL. Column that includes ZIP code data
+#' @param name_heuristics logical. Indicates whether common name cleaning heuristics should be implemented
 #' @export
 #' @importFrom data.table setDT tstrsplit year month mday
 #'
-prep_data_for_linkage = function(d, first_name, last_name, dob, middle_name = NULL, zip = NULL){
+prep_data_for_linkage = function(d, first_name, last_name, dob, middle_name = NULL, zip = NULL, name_heuristics = TRUE ){
 
   setDT(d)
 
@@ -33,6 +34,13 @@ prep_data_for_linkage = function(d, first_name, last_name, dob, middle_name = NU
   ## clean names
   d[, first_name := clean_names(first_name)]
   d[, last_name := clean_names(last_name)]
+
+  ## Clean names
+  if(name_heuristics){
+    d[first_name %in% c('1', 'TRUE', 'true'), first_name := 'True']
+    d[first_name %in% 'NULL', first_name := NA]
+    d[last_name %in% 'NULL', last_name := NA]
+  }
 
   ## split
   fns = d[, tstrsplit(first_name, split = ' ')]

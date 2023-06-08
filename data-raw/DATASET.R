@@ -79,6 +79,22 @@ peeps = unique(peeps)
 # z = kcz[, sample(geo_id, size = nrow(peeps), replace = T, prob = pop)]
 # peeps[, zip := z]
 # peeps[, zip2 := z]
-
 usethis::use_data(fake_one, overwrite = TRUE)
+fake_one = fake_one
+setnames(fake_one, 'simulant_id', 'id1')
+saveRDS(fake_one, 'data-raw/fake_one.rds')
 usethis::use_data(fake_two, overwrite = TRUE)
+setnames(fake_two, 'simulant_id', 'id2')
+saveRDS(fake_two, 'data-raw/fake_two.rds')
+# Make a dataset of potential pairs for matchmaker
+# this is probably a stupid way to do this
+pairs = CJ(id1 = fake_one[, simulant_id], id2 = fake_two[, simulant_id])
+pairs[, same := id1 == id2]
+notmatch = pairs[same == F][sample(seq_len(.N), 100)]
+match = pairs[same == T][sample(seq_len(.N), 25)]
+rm(pairs)
+pairs = rbind(match, notmatch)
+pairs[, truth := as.integer(same)]
+pairs[, same := NULL]
+usethis::use_data(pairs, overwrite = T)
+saveRDS(pairs, 'data-raw/pairs.rds')

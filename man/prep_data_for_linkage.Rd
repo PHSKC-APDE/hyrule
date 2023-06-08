@@ -10,7 +10,8 @@ prep_data_for_linkage(
   last_name,
   dob,
   middle_name = NULL,
-  zip = NULL
+  zip = NULL,
+  name_heuristics = TRUE
 )
 }
 \arguments{
@@ -23,6 +24,8 @@ prep_data_for_linkage(
 \item{dob}{character. Identifies the column with date of birth}
 
 \item{zip}{character. Default is NULL. Column that includes ZIP code data}
+
+\item{name_heuristics}{logical. Indicates whether common name cleaning heuristics should be implemented}
 
 \item{middle_name.}{character identifying the column with middle initial}
 }
