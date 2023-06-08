@@ -23,25 +23,27 @@ matchmaker = function(...){
             tags$br(),
             shinyFiles::shinyFilesButton('loadData2', 'Select Data2 File', 'Please select a file', FALSE),
             tags$br(),
+            conditionalPanel('output.filesLoaded == 1',
+                            tags$h4('Navigation:'),
 
-            tags$h4('Navigation:'),
-            #Navigate to pairs
-            uiOutput('selection'),
+                            #Navigate to pairs
+                            uiOutput('selection'),
 
-            tags$h4('Select cols:'),
+                            tags$h4('Select cols:'),
 
-            # drop down for ID 1
-            uiOutput('id1'),
+                            # drop down for ID 1
+                            uiOutput('id1'),
 
-            # drop down for ID 2
-            uiOutput('id2'),
+                            # drop down for ID 2
+                            uiOutput('id2'),
 
-            # Check box for variables to compare
-            uiOutput('comparevars'),
+                            # Check box for variables to compare
+                            uiOutput('comparevars'),
 
-            tags$h4('Save Results:'),
-            # Save Results
-            downloadButton("downloadMatches", "Save Results"),
+                            tags$h4('Save Results:'),
+                            # Save Results
+                            downloadButton("downloadMatches", "Save Results")
+              )
 
 
           ),
@@ -51,25 +53,26 @@ matchmaker = function(...){
             tabsetPanel(
               tabPanel('Make Matches',
                        br(),
+                       conditionalPanel('output.filesLoaded == 0', tags$h4('To get started, you will need to load a pairs file as well as two data files')),
                        uiOutput('mismatchcols'),
                        uiOutput('status'),
                        hr(),
                        tableOutput('compare'),
                        hr(),
                        conditionalPanel("output.showButtons == 1",
-                         fluidRow(
-                           actionButton('previous', 'Previous'),
-                           actionButton('nomatch', 'NEIN!'),
-                           actionButton('flag', 'FLAG'),
-                           actionButton('match', 'Match!'),
-                           actionButton('nextone', 'Next')
-                         )
-                       ),
-                       br(),
-                       tableOutput('sum'),
-                       br(),
-                       tags$h4('Match breakdown'),
-                       htmlOutput('filestatus')
+                             fluidRow(
+                               actionButton('previous', 'Previous'),
+                               actionButton('nomatch', 'NEIN!'),
+                               actionButton('flag', 'FLAG'),
+                               actionButton('match', 'Match!'),
+                               actionButton('nextone', 'Next')
+                             ),
+                             br(),
+                             tableOutput('sum'),
+                             br(),
+                             tags$h4('Match breakdown'),
+                             htmlOutput('filestatus')
+                           )
                        ),
               tabPanel('Review Results',
                        DT::DTOutput('pair_view'))
@@ -227,7 +230,7 @@ matchmaker = function(...){
     }, striped = T, bordered = T)
 
 
-    # A toggle to display buttons
+    # A toggle to display buttons ----
     displayButtons = reactiveVal(0)
     observe({
       displayButtons(0)
@@ -237,7 +240,15 @@ matchmaker = function(...){
     output$showButtons <- reactive(displayButtons())
     outputOptions(output, 'showButtons', suspendWhenHidden = FALSE)
 
-
+    # A toggle to display selection options
+    filesLoaded = reactiveVal(0)
+    observe({
+      filesLoaded(0)
+      req(d1(), d2(), pairs())
+      filesLoaded(1)
+    })
+    output$filesLoaded <- reactive(filesLoaded())
+    outputOptions(output, 'filesLoaded', suspendWhenHidden = FALSE)
 
     # Navigation buttons ----
     ## Previous ----
