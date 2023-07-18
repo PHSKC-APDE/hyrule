@@ -9,12 +9,12 @@
 #' @export
 #' @importFrom data.table setDT tstrsplit year month mday
 #'
-prep_data_for_linkage = function(d, first_name, last_name, dob, middle_name = NULL, zip = NULL, name_heuristics = TRUE ){
+prep_data_for_linkage = function(d, first_name, last_name, dob, middle_name = NULL, zip = NULL, name_heuristics = TRUE){
 
   setDT(d)
 
   # make sure all variables are within d
-  cols = list(first_name = first_name, last_name = last_name, dob = dob, zip = zip)
+  cols = list(first_name = first_name, last_name = last_name, dob = dob, zip = zip, middle_name = middle_name)
   cols = unlist(cols)
   mis = setdiff(cols, names(d))
   if(length(mis)>0) stop(paste0('Missing the following columns: ', paste(mis, collapse =',')))
@@ -63,6 +63,8 @@ prep_data_for_linkage = function(d, first_name, last_name, dob, middle_name = NU
   # Middle initial
   if(!is.null(middle_name)){
     d[, middle_initial := substr(clean_names(middle_name),1,1)]
+    d[, middle_name := clean_names(middle_name)]
+    d[, middle_name_noblank := gsub(' ', '', middle_name)]
   }
 
   # ZIP
