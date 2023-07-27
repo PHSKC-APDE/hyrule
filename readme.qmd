@@ -1,0 +1,26 @@
+---
+title: "Getting started with ML record linkage"
+format: html
+editor: visual
+---
+
+## hyrule
+
+`hyrule` is a package that contains a few routines to facilitate machine learning record linkage (MLRL) via ensemble model approach (stacking).
+
+## Getting started
+
+1.  [Review this presentation](Ensemble%20machine%20learning%20for%20record%20linkage.pdf). It provides an overview of using machine learning for record linkage as well as a case study, comparisons to probabilistic methods, advice, and more.
+2.  Review the dataset(s) you want to link together. Identify variables that they have in common (e.g. first name, last name, DOB, ZIP) that are present in all dataset(s) and might help identify whether two records are a match.
+3.  Decide how fancy you need to be. MLRL should be better and more flexible than using probabilistic interfaces like fastLink or multilink, but it does have a few complications (listed below). If you need something quick and dirty and your data isn't too big, multilink (or fastLink) might be good enough. If you are willing to put a touch more time into things, MLRL should pay dividends. Worst case is you could do some fancy coding to incorporate probabilistic record linkage methods as a child model in your MLRL ensemble and then your ensemble should be no worse than the probabilistic approach.
+    1.  You need to generate a training dataset. There are ways to use shortcuts to make this workable, but you will be manually reviewing potential matches and deciding their match status
+    2.  Implementing MLRL probably requires more coding than probabilistic approaches. Such is the tradeoff between flexibility and ease. It is probably easier to do a first pass with probabilistic approaches but incorporating variables beyond name, date of birth, SSN, etc. is much more difficult.
+4.  Decide how you will want to generate your first training dataset. I recommend training a model based on fake data
+
+## Using a pre-fit model
+
+## Clean data
+
+## Creating your own training dataset
+
+## Generating predictions
