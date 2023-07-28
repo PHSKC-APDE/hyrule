@@ -9,8 +9,8 @@
 #' `exact_location` is a binary flag indicating that the pair has at least one geocoded location within 3 meters.
 #' `min_loc_distance` is the minimum distance observed between a record pair in meters
 #'
-#' @importFrom sf st_geometry_type
-process_location_history(pairs, xy1, id1, xy2, id2){
+#' @importFrom sf st_geometry_type st_centroid
+process_location_history = function(pairs, xy1, id1, xy2, id2){
   pairs = unique(pairs[, .SD, .SDcols = c(id1, id2)])
   # most checks for xy1 and xy2 should have occured already
 

@@ -6,11 +6,13 @@
 \usage{
 prep_data_for_linkage(
   d,
-  first_name,
-  last_name,
-  dob,
+  first_name = NULL,
+  last_name = NULL,
+  dob = NULL,
   middle_name = NULL,
   zip = NULL,
+  ssn = NULL,
+  sex = NULL,
   name_heuristics = TRUE
 )
 }
@@ -23,12 +25,19 @@ prep_data_for_linkage(
 
 \item{dob}{character. Identifies the column with date of birth}
 
+\item{middle_name}{character identifying the column with middle name (or middle initial)}
+
 \item{zip}{character. Default is NULL. Column that includes ZIP code data}
 
-\item{name_heuristics}{logical. Indicates whether common name cleaning heuristics should be implemented}
+\item{ssn}{character: column of social security number}
 
-\item{middle_name.}{character identifying the column with middle initial}
+\item{sex}{character: Column specifiyng}
+
+\item{name_heuristics}{logical. Indicates whether common name cleaning heuristics should be implemented}
 }
 \description{
 Prepare a dataset for linkage
+}
+\details{
+This function cleans/formats commonly used variables (depending on if they were supplied or not).
 }

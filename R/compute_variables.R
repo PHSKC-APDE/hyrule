@@ -14,7 +14,7 @@
 #' `pairs`, `d1`, `d2`, `ph1`, and `ph2` will all be converted into data.tables internally.
 #' There is a slight chance this change the objects in the parent environment
 #'
-#' @importFrom sf st_crs st_distance st_centriod
+#' @importFrom sf st_crs st_distance st_centroid
 #' @importFrom data.table setnames data.table
 #' @importFrom units set_units
 compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_zip){
@@ -185,13 +185,11 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
     }
 
   }
-
   # location
   if(!missing(xy1) && !missing(xy2)){
     locs = process_location_history(pairs, xy1, id1, xy2, id2)
     input = merge(input, locs, all.x = T, by = c(id1, id2))
   }
-
 
   # phone
   if(!missing(ph1) && !missing(ph2)){
@@ -200,10 +198,6 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   }
 
   # Twin thing?
-
-
-
-
 
 
   return(input)

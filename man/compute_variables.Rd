@@ -4,13 +4,33 @@
 \alias{compute_variables}
 \title{Create variables for linkage}
 \usage{
-compute_variables(input, sex = F)
+compute_variables(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_zip)
 }
 \arguments{
-\item{input}{data.table of pairs from two datasets prepped with prep_data_for_linkage}
+\item{pairs}{data.frame/data.table of record pairs to generate variables for. Must include two id columns (specified by `id1` and `id2` arguments) for `d1` and `d2`}
 
-\item{sex}{logical. Should sex/gender based variables be computed?}
+\item{d1}{data.frame/data.table of records prepped via `prep_data_for_linkage`}
+
+\item{id1}{character. Column name identifying a ID column in `id1`. Also must exist in `pairs` and `xy1` and `xy1`, if using.}
+
+\item{d2}{data.frame/data.table of records `prep_data_for_linkage`}
+
+\item{id2}{character. Column name identifying a ID column in `id2`. Also must exist in `pairs` and `xy2` and `xy2`, if using.}
+
+\item{xy1}{sf. Coordinates per record for `d1` for those rows that have them. Must be in the same CRS as `xy2` and have an `id1` column. Ideally, its best to pass things geocoded to a level finer than a ZIP code}
+
+\item{xy2}{sf. Coordinates per record for  `d2` for those rows that have them. Must be in the same CRS as `xy1` and have an `id2` column. Ideally, its best to pass things geocoded to a level finer than a ZIP code}
+
+\item{ph1}{data.frame/data.table with (at least) two columns: `id1` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`}
+
+\item{ph2}{data.frame/data.table with (at least) two columns: `id2` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`}
+
+\item{geom_zip}{sf object of ZIP codes. Must have a column named `zip`. `tigris::zctas` is (with a bit of modification) a decent place to start.}
 }
 \description{
 Create variables for linkage
+}
+\details{
+`pairs`, `d1`, `d2`, `ph1`, and `ph2` will all be converted into data.tables internally.
+There is a slight chance this change the objects in the parent environment
 }

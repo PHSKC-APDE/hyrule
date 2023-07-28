@@ -4,6 +4,9 @@
 #' @param id2 character. Column name identifying a ID column in `id2`. Also must exist in `pairs` and `xy2` and `xy2`, if using.
 #' @param ph1 data.frame/data.table with (at least) two columns: `id1` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
 #' @param ph2 data.frame/data.table with (at least) two columns: `id2` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
+#' @importFrom data.table setnames
+#' @importFrom stringr str_replace_all
+#' @importFrom stringdist stringdist
 process_phone_history = function(pairs, ph1, id1, ph2, id2){
   pairs = unique(pairs[, .SD, .SDcols = c(id1, id2)])
 
@@ -36,7 +39,7 @@ process_phone_history = function(pairs, ph1, id1, ph2, id2){
   # compute phone distance
   pairs = merge(pairs, ph1, all.x = T, by = id1, allow.cartesian = T)
   pairs = merge(pairs, ph2, all.x = T, by = id2, allow.cartesian = T)
-  pairs[, phone_dist := stringdist(phone_number.x, phone_number.y, method = 'dl')]
+  pairs[, phone_dist := stringdist::stringdist(phone_number.x, phone_number.y, method = 'dl')]
   pairs[phone_dist>10, phone_dist := NA]
   pairs[, phone_mis := as.integer(is.na(phone_dist))]
   pairs[is.na(phone_dist), phone_dist := mean(pairs[,phone_dist], na.rm = T)]
