@@ -98,7 +98,7 @@ zip1 = setDT(st_drop_geometry(st_join(subset(lh1, time == 1), nc[, 'zip']))[, c(
 zip2 = setDT(st_drop_geometry(st_join(subset(lh2, time == 1), nc[, 'zip']))[, c('simulant_id', 'zip')])
 
 fake_one = merge(fake_one, zip1, by = 'simulant_id')
-fake_two = merge(fake_one, zip2, by = 'simulant_id')
+fake_two = merge(fake_two, zip2, by = 'simulant_id')
 
 # Make phone history
 peeps[, nnums := sample(1:3, .N, T)]
@@ -157,7 +157,7 @@ saveRDS(phone_history_two, 'data-raw/phone_history_two.rds')
 
 # Make a dataset of potential pairs for matchmaker
 # this is probably a stupid way to do this
-pairs = CJ(id1 = fake_one[, simulant_id], id2 = fake_two[, simulant_id])
+pairs = CJ(id1 = fake_one[, id1], id2 = fake_two[, id2])
 pairs[, same := id1 == id2]
 notmatch = pairs[same == F][sample(seq_len(.N), 100)]
 match = pairs[same == T][sample(seq_len(.N), 25)]

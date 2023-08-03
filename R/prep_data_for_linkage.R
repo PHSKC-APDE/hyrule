@@ -41,7 +41,7 @@ prep_data_for_linkage = function(d,
   # sex
   if('sex' %in% names(cols)){
     d[, sex := toupper(substr(sex,1,1))]
-    stopifnot('`sex` column must be convertable to "M", "F", and/or "X"' =all(d[, sex %in% c('M', 'F', 'X')]))
+    stopifnot('`sex` column must be convertible to "M", "F", and/or "X"' = all(d[!is.na(sex), sex %in% c('M', 'F', 'X')]))
   }
 
   # First Name
@@ -59,12 +59,12 @@ prep_data_for_linkage = function(d,
   # Last Name
   if('last_name' %in% names(cols)){
     d[, last_name := clean_names(last_name)]
-    if(name_hueristics) d[last_name %in% 'NULL', last_name := NA]
+    if(name_heuristics) d[last_name %in% 'NULL', last_name := NA]
     d[, last_name_noblank := gsub(' ', '', last_name)]
   }
 
   # dob
-  if('dob' %iN% names(cols)){
+  if('dob' %in% names(cols)){
     stopifnot('`dob` variable must be of type Date' = is.Date(d[['dob']]))
     d[, paste0('dob_', c('year', 'month', 'day')) := list(data.table::year(dob), data.table::month(dob), data.table::mday(dob))]
 
