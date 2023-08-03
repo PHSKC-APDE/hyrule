@@ -63,7 +63,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   vardt = data.table::data.table(pv = pos_vars)
   vardt[, one := pv %in% names(d1)]
   vardt[, two := pv %in% names(d2)]
-  vardt[one == TRUE & two == TRUE]
+  vardt = vardt[one == TRUE & two == TRUE]
   v = vardt[, pv]
 
   # Fix dataset naming
@@ -71,7 +71,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   data.table::setnames(d1, v, paste0(v,'1'))
 
   d2 = d2[, .SD, .SDcols = c(id2, v)]
-  data.table::setnames(d1, v, paste0(v,'1'))
+  data.table::setnames(d2, v, paste0(v,'2'))
 
   input = merge(pairs, d1, all.x = T, by = id1)
   input = merge(input, d2, all.x = T, by = id2)
@@ -95,7 +95,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   # first name metrics
   if('first_name_noblank' %in% v){
     input[!is.na(first_name_noblank1) & !is.na(first_name_noblank2),
-          c('first_name_cos', 'first_name_jw') :=list(
+          c('first_name_cos2', 'first_name_jw') :=list(
             stringdist::stringdist(first_name_noblank1,
                                    first_name_noblank2,
                                    'cosine',
@@ -106,7 +106,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
                                    p = .1)
           )]
 
-    input[is.na(first_name_cos), first_name_cos2 := 1]
+    input[is.na(first_name_cos2), first_name_cos2 := 1]
     input[is.na(first_name_jw), first_name_jw := 1]
 
   }
@@ -114,7 +114,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   # last name metrics
   if('last_name_noblank' %in% v){
     input[!is.na(last_name_noblank1) & !is.na(last_name_noblank2),
-          c('last_name_cos', 'last_name_jw') :=list(
+          c('last_name_cos2', 'last_name_jw') :=list(
             stringdist::stringdist(last_name_noblank1,
                                    last_name_noblank2,
                                    'cosine',
@@ -125,20 +125,20 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
                                    p = .1)
           )]
 
-    input[is.na(last_name_cos), last_name_cos2 := 1]
+    input[is.na(last_name_cos2), last_name_cos2 := 1]
     input[is.na(last_name_jw), last_name_jw := 1]
 
   }
 
   # combined name
-  if(all('first_name_noblank', 'last_name_noblank') %in% v){
-    input[, firstlast_noblank1 := paste0(first_name1, last_name_noblank1)]
-    input[, firstlast_noblank2 := paste0(first_name2, last_name_noblank2)]
+  if(all(c('first_name_noblank', 'last_name_noblank') %in% v)){
+    input[, firstlast_noblank1 := paste0(first_name_noblank1, last_name_noblank1)]
+    input[, firstlast_noblank2 := paste0(first_name_noblank2, last_name_noblank2)]
 
 
 
     input[!is.na(first_name_noblank1) & !is.na(last_name_noblank1) & !is.na(first_name_noblank2) & !is.na(last_name_noblank2),
-          full_name_cosine := stringdist::stringdist(paste0(first_name_noblank1, last_name_noblank1),
+          full_name_cosine3 := stringdist::stringdist(paste0(first_name_noblank1, last_name_noblank1),
                                  paste0(first_name_noblank2, first_name_noblank2),
                                  'cosine', q = 3)]
     input[is.na(full_name_cosine3), full_name_cosine3 := 1]
@@ -153,12 +153,12 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
     input[is.na(middle_initial_na), middle_initial_na := 1]
   }
   # Updated combined name
-  if('middle_name' %in% v){
+  if(all(c('first_name_noblank', 'last_name_noblank', 'middle_name') %in% v)){
 
     input[, complete_name_noblank1 := paste0(first_name1,ifelse(nchar(middle_name1)>1, middle_name1, ''), last_name_noblank1)]
     input[, complete_name_noblank2 := paste0(first_name2,ifelse(nchar(middle_name2)>1, middle_name2, ''), last_name_noblank2)]
 
-    input[!is.na(complate_name_noblank1 | !is.na(complete_name_noblank2)),
+    input[!is.na(complete_name_noblank1 | !is.na(complete_name_noblank2)),
           full_name_cosine_mid := stringdist::stringdist(complete_name_noblank1,
                                                          complete_name_noblank2,
                                                          'cosine', q = 3)]
