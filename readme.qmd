@@ -15,7 +15,7 @@ editor: visual
 3.  Decide how fancy you need to be. MLRL should be better and more flexible than using probabilistic interfaces like fastLink or multilink, but it does have a few complications (listed below). If you need something quick and dirty and your data isn't too big, multilink (or fastLink) might be good enough. If you are willing to put a touch more time into things, MLRL should pay dividends. Worst case is you could do some fancy coding to incorporate probabilistic record linkage methods as a child model in your MLRL ensemble and then your ensemble should be no worse than the probabilistic approach.
     1.  You need to generate a training dataset. There are ways to use shortcuts to make this workable, but you will be manually reviewing potential matches and deciding their match status
     2.  Implementing MLRL probably requires more coding than probabilistic approaches. Such is the tradeoff between flexibility and ease. It is probably easier to do a first pass with probabilistic approaches but incorporating variables beyond name, date of birth, SSN, etc. is much more difficult.
-4.  Decide how you will want to generate your first training dataset. I recommend training a model based on fake data
+4.  Decide how you will want to generate your first training dataset. I recommend using a prefit model (either on fake data or a model fit by a colleague-- ask Daniel about this second option)
 
 ## Using a pre-fit model
 

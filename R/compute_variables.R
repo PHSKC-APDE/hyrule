@@ -159,9 +159,11 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
     input[, complete_name_noblank2 := paste0(first_name2,ifelse(nchar(middle_name2)>1, middle_name2, ''), last_name_noblank2)]
 
     input[!is.na(complete_name_noblank1 | !is.na(complete_name_noblank2)),
-          full_name_cosine_mid := stringdist::stringdist(complete_name_noblank1,
+          full_name_cosine3_mid := stringdist::stringdist(complete_name_noblank1,
                                                          complete_name_noblank2,
                                                          'cosine', q = 3)]
+    input[is.na(full_name_cosine3_mid), full_name_cosine3_mid := 1]
+
   }
 
   # ZIP code
@@ -196,9 +198,6 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
     ph = process_phone_history(pairs, ph1, id1, ph2, id2)
     input = merge(input, ph, all.x = T, by = c(id1, id2))
   }
-
-  # Twin thing?
-
 
   return(input)
 }
