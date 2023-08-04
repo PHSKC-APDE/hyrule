@@ -30,6 +30,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   stopifnot(missing(ph1) && missing(ph2) || (!missing(ph1) && !missing(ph2)))
   stopifnot(length(id1) == 1 & id1 %in% names(d1))
   stopifnot(length(id2) == 1 & id2 %in% names(d2))
+  stopifnot('`id1` and `id2` cannot be the same value' = id1 != id2)
   if(!missing(geom_zip)){
     stopifnot(inherits(geom_zip, 'sf'))
     stopifnot('zip' %in% names(geom_zip))

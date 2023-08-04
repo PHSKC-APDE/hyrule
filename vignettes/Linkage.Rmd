@@ -113,21 +113,21 @@ Often location history and phone numbers will need to be cleaned (and/or reforma
 
 ## The machine learning linkage loop
 
-Machine learning record linkage works in three main steps:
+Machine learning record linkage works in three main steps as listed.
 
 1.  A training dataset is created by manually labeling pairs of records as a match or not a match
 2.  A set of models are fit on the training dataset
 3.  The fit models are applied (e.g. prediction) to all of the potential pairs
 
-Once one cycle has been complete, you can review the results and figure out if additional variables need to be added and/or if the training data needs to be augmented.
+Once a has been complete, you can review the results and figure out if additional variables need to be added and/or if the training data needs to be augmented.
 
 ## Blocking: generating possible pairs
 
-Blocking is the process by which a-priori conditions are used to limit the potential universe of possible pairs. For example, you might require that a pair of records have the same year of birth before evaluating whether or not they are a match based on the full set of available information. Blocking turns a large problem (everyone compared to everyone else) into a set of slightly smaller ones (compare everyone born in 1990 with everyone else born in 1990). You can block on multiple things sequentially (e.g. year of birth and then sex) and/or jointly (sex AND year of birth). Sequential blocking schemes require some reconciliation process at the end to remove duplicates and do other clean up (beyond the scope of this vignette). This might also occur if you have missingness in your blocking variable and you allow those rows to be assesed in multiple blocks.
+Blocking is the process in which a-priori conditions are used to limit the potential universe of possible pairs. For example, you might require that a pair of records have the same year of birth before evaluating whether or not they are a match based on the full set of available information. Blocking turns a large problem (everyone compared to everyone else) into a set of slightly smaller ones (compare everyone born in 1990 with everyone else born in 1990). You can block on multiple things sequentially (e.g. year of birth and then sex) and/or jointly (sex AND year of birth). Sequential blocking schemes require some reconciliation process at the end to remove duplicates and do other clean up (beyond the scope of this vignette). This might also occur if you have missingness in your blocking variable and you allow those rows to be assessed in multiple blocks.
 
 ### Example
 
-In this example, we block on date of birth year. For simplicity, we are only going to work with records
+In this example, we block on date of birth year. For simplicity, we are only going to work with records between 1900 and 2022.
 
 ```{r, pos-pairs}
 
@@ -146,10 +146,8 @@ blocks = lapply(posyears, function(x){
 
 ```
 
-## Building a training dataset
+## Making a training dataset
 
-### Transfer learning
+## Transfer learning
 
-To start building a training dataset, you can use the results from a previously fitted model (or some
-
-### String distance
+In general, I recommend starting with a pre-trained model and using those models to make an initial pass at your data. If you are luckily, the previously trained model is good enough and your job is done. More likely, you'll want to use these initial predictions to inform how you select pairs to manually identify as a match or not

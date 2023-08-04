@@ -124,33 +124,35 @@ phs = lapply(0:1, function(x){
 phone_history_one = phs[[1]]
 phone_history_two = phs[[2]]
 
+# clean up names and stuff
+setnames(fake_one, 'simulant_id', 'id1')
+setnames(fake_two, 'simulant_id', 'id2')
+
 # Save results
 
 # Fake data
 usethis::use_data(fake_one, overwrite = TRUE)
 fake_one = fake_one
-setnames(fake_one, 'simulant_id', 'id1')
 saveRDS(fake_one, 'data-raw/fake_one.rds')
 usethis::use_data(fake_two, overwrite = TRUE)
-setnames(fake_two, 'simulant_id', 'id2')
+
 saveRDS(fake_two, 'data-raw/fake_two.rds')
 
 # Location history
-usethis::use_data(location_history_one, overwrite = TRUE)
 setnames(location_history_one, 'simulant_id', 'id1')
-saveRDS(location_history_one, 'data-raw/location_history_one.rds')
-
-usethis::use_data(location_history_two, overwrite = TRUE)
 setnames(location_history_two, 'simulant_id', 'id2')
+usethis::use_data(location_history_one, overwrite = TRUE)
+saveRDS(location_history_one, 'data-raw/location_history_one.rds')
+usethis::use_data(location_history_two, overwrite = TRUE)
 saveRDS(location_history_two, 'data-raw/location_history_two.rds')
 
 # phone history
+setnames(phone_history_one, c('simulant_id', 'value'), c('id1', 'phone_number'))
+setnames(phone_history_two, c('simulant_id', 'value'), c('id2', 'phone_number'))
 usethis::use_data(phone_history_one, overwrite = TRUE)
-setnames(phone_history_one, 'simulant_id', 'id1')
 saveRDS(phone_history_one, 'data-raw/phone_history_one.rds')
 
 usethis::use_data(phone_history_two, overwrite = TRUE)
-setnames(phone_history_two, 'simulant_id', 'id2')
 saveRDS(phone_history_two, 'data-raw/phone_history_two.rds')
 
 
