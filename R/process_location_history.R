@@ -26,7 +26,7 @@ process_location_history = function(pairs, xy1, id1, xy2, id2){
   dist = st_distance(xy1, xy2)
   dist = data.table::data.table(dist)
   setnames(dist, xy2[[id2]])
-  dist[, (id1) := xy1[[id2]]]
+  dist[, (id1) := xy1[[id1]]]
   dist = melt(dist, id.vars = id1, variable.name = id2, variable.factor = FALSE)
 
   # for each pair, find the minimum distance between geocoded addresses

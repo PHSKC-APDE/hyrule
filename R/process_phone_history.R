@@ -12,12 +12,12 @@ process_phone_history = function(pairs, ph1, id1, ph2, id2){
 
   # clean phone numbers
   setDT(ph1); setDT(ph2);
-  ph1[, phone_number := stringr::str_replace_all(value, "[^0-9]", "")]
-  ph2[, phone_number := stringr::str_replace_all(value, "[^0-9]", "")]
+  ph1[, phone_number := stringr::str_replace_all(phone_number, "[^0-9]", "")]
+  ph2[, phone_number := stringr::str_replace_all(phone_number, "[^0-9]", "")]
 
   # limit to those numbers within the pair set
-  numbers = unique(ph1[get(id1) %in% pairs[, get(id1)], phone_number],
-                   ph2[get(id2) %in% pairs[, get(id2)], phone_number])
+  numbers = unique(c(ph1[['phone_number']][ph1[[id1]] %in% pairs[[id1]]],
+                     ph2[['phone_number']][ph2[[id2]] %in% pairs[[id2]]]))
   numbers = na.omit(numbers)
   numbers = numbers[numbers != '']
 
@@ -26,15 +26,15 @@ process_phone_history = function(pairs, ph1, id1, ph2, id2){
 
   # compute the number of people at each phone number per dataset
   # Max at 10, just for fun
-  mxN = rbind(ph1[, .N, phone_number], ph2[ .N, phone_number])
-  mxN = mx_N_at_number[, .(max_N_at_number = max(N)), phone_number]
-  mxN[N>10, max_N_at_number := 10]
+  mxN = rbind(ph1[, .N, phone_number], ph2[, .N, phone_number])
+  mxN = mxN[, .(max_N_at_number = max(N)), phone_number]
+  mxN[max_N_at_number>10, max_N_at_number := 10]
 
   # For each phone number for a person, find the median max number of people
   ph1 = merge(ph1, mxN, all.x = T, by = 'phone_number')
   ph2 = merge(ph2, mxN, all.x = T, by = 'phone_number')
-  mnn1 = ph1[, .(median_n_at_number = median(max_n_at_number)), c(id1)]
-  mnn2 = ph2[, .(median_n_at_number = median(max_n_at_number)), c(id2)]
+  mnn1 = ph1[, .(max_N_at_number = median(max_N_at_number)), c(id1)]
+  mnn2 = ph2[, .(max_N_at_number = median(max_N_at_number)), c(id2)]
 
   # compute phone distance
   pairs = merge(pairs, ph1, all.x = T, by = id1, allow.cartesian = T)
@@ -45,18 +45,19 @@ process_phone_history = function(pairs, ph1, id1, ph2, id2){
   pairs[is.na(phone_dist), phone_dist := mean(pairs[,phone_dist], na.rm = T)]
 
   # keep only the minimum among pairs
-  pairs = pairs[pairs[, .I[which.min(phone_dist)], c(id1, id2)]$V1, ]
+  i = pairs[, .I[which.min(phone_dist)], c(id1, id2)]$V1
+  pairs = pairs[i, ]
 
   # Add on the median n at number stuff
   pairs = merge(pairs, mnn1, all.x = T, by = id1)
   pairs = merge(pairs, mnn2, all.x = T, by = id2)
-  pairs[, median_n_at_number := (median_n_at_number.x + median_n_at_number.y)/2 ]
-  pairs[, paste0('median_n_at_number.', c('x','y')) := NULL]
+  pairs[, max_N_at_number := (max_N_at_number.x + max_N_at_number.y)/2 ]
+  pairs[, paste0('max_N_at_number.', c('x','y')) := NULL]
   data.table::setnames(pairs, paste0('phone_number', c('.x','.y')), paste0('phone_number', 1:2))
 
   return(pairs[, .SD, .SDcols =
                  c(id1, id2, 'phone_dist',
-                   'phone_mis', 'median_n_at_number',
+                   'phone_mis', 'max_N_at_number',
                    'phone_number1', 'phone_number2')])
 
 }

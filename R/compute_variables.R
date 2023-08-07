@@ -149,7 +149,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   # middle name
   if('middle_initial' %in% v){
     input[, middle_initial_agree := as.integer(middle_initial1 == middle_initial2)]
-    input[is.na(middle_initial_agree) := 0]
+    input[is.na(middle_initial_agree), middle_initial_agree := 0]
     input[, middle_initial_na := as.integer(middle_initial1 == '' | middle_initial2 == '')]
     input[is.na(middle_initial_na), middle_initial_na := 1]
   }
@@ -179,9 +179,9 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
       geom_zip = sf::st_centroid(geom_zip)
       dist = data.table::data.table(st_distance(geom_zip, geom_zip))
       data.table::setnames(dist, as.character(geom_zip$zip))
-      dist[, zip := geom_zip$zip]
+      dist[, zip1 := geom_zip$zip]
       dist = melt(dist, id.var = 'zip1', variable.factor = F, variable.name = 'zip2')
-      dist[, zip_Mm := units::set_units(value, '1e6*m')]
+      dist[, zip_Mm := as.numeric(units::set_units(value, '1e6*m'))]
       dist[, c('zip1', 'zip2') := list(as.character(zip1), as.character(zip2))]
 
       input = merge(input, dist, all.x = T, by = c('zip1', 'zip2'))
