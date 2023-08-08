@@ -4,7 +4,10 @@
 #' @param match_prop numeric (0,1). The proportion of the training dataset that is made up of matches
 #' @export
 #' @importFrom sf read_sf
+#' @importFrom data.table CJ data.table between
 generate_starter = function(variables = c('first_name', 'last_name', 'date_of_birth'), match_prop = .3){
+  n = 9000
+
   # Load data
   d1 = hyrule::fake_one
   d2 = hyrule::fake_two
@@ -14,12 +17,12 @@ generate_starter = function(variables = c('first_name', 'last_name', 'date_of_bi
   stopifnot(data.table::between(match_prop, 0, 1, F))
 
   # Identify some no matchs
-  nomatch = CJ(id1 = d1[, sample(id1,1000)], id2 = d2[, sample(id2, 1000)])
+  nomatch = data.table::CJ(id1 = d1[, sample(id1,n)], id2 = d2[, sample(id2, n)])
   nomatch = nomatch[id1 != id2]
-  nomatch = nomatch[nomatch[, sample(.I, round(1000*(1 - match_prop)))]]
-  match = sample(intersect(d1[, id1], d2[, id2]), round(match_prop * 1000))
+  nomatch = nomatch[nomatch[, sample(.I, round(n*(1 - match_prop)))]]
+  match = sample(intersect(d1[, id1], d2[, id2]), round(match_prop * n))
 
-  pairs = rbind(nomatch, data.table(id1 = match, id2 = match))
+  pairs = rbind(nomatch, data.table::data.table(id1 = match, id2 = match))
   pairs[, pair := as.integer(id1 == id2)]
 
   # clean the data
@@ -32,16 +35,37 @@ generate_starter = function(variables = c('first_name', 'last_name', 'date_of_bi
   fake_zip = sf::read_sf(system.file("shape/nc.shp", package="sf"))
   fake_zip$zip = fake_zip$CNTY_ID+10000
 
-  train = compute_variables(pairs, d1, 'id1', d2, 'id2',
-                            location_history_one, location_history_two,
-                            phone_history_one, phone_history_two,
-                            geom_zip = fake_zip)
+  a = list(pairs = pairs,
+           d1 = d1,
+           id1 = 'id1',
+           d2 = d2,
+           id2 = 'id2',
+           xy1 = if('location' %in% variables) location_history_one else NULL,
+           xy2 = if('location' %in% variables) location_history_one else NULL,
+           ph1 = if('phone' %in% variables) phone_history_one else NULL,
+           ph2 = if('phone' %in% variables) phone_history_one else NULL,
+           geom_zip = fake_zip)
+  a = a[!sapply(a, is.null)]
+
+  train = do.call(compute_variables,
+                  args = a)
+
+  # make the formula
+  form = list(first_name = c('first_name_cos2'), #'first_name_jw'
+              last_name = c('last_name_cos2'), #'last_name_jw'
+              middle_initial = c('middle_initial_agree'), #, 'middle_inital_na'
+              date_of_birth = c('dob_ham'), #'mis_dob'
+              sex = 'sex_disagree',
+              zip = 'zip_Mm',
+              location = c('exact_location'),
+              phone = c('phone_dist', 'max_N_at_number')) #'phone_mis'
+  form = form[variables]
+
+  form = unlist(form)
+  form = as.formula(paste('pair~', paste(form, collapse = '+')))
+
+  # fit models
+  fitz = fit_link(train, form, default_ensemble())
 
 }
 
-
-
-
-
-# Make a dataset that is 30 match,
-pairs

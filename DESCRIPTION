@@ -17,7 +17,21 @@ Imports:
     fs,
     shiny,
     shinyFiles,
-    tools
+    tools,
+    recipes,
+    parsnip,
+    ranger,
+    xgboost,
+    glmnet,
+    kernlab,
+    stacks,
+    rsample,
+    sf,
+    stringdist,
+    stringr,
+    units,
+    workflowsets,
+    butcher
 Suggests: 
     knitr,
     rmarkdown

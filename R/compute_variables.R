@@ -17,10 +17,11 @@
 #' @importFrom sf st_crs st_distance st_centroid
 #' @importFrom data.table setnames data.table
 #' @importFrom units set_units
+#' @importFrom stringdist stringdist
 compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_zip){
 
   # Hamming distance
-  ham = function(x,y) stringdist(as.character(x), as.character(y), 'hamming')
+  ham = function(x,y) stringdist::stringdist(as.character(x), as.character(y), 'hamming')
 
   # Validate inputs
   stopifnot(is.data.frame(pairs))
@@ -153,19 +154,24 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
     input[, middle_initial_na := as.integer(middle_initial1 == '' | middle_initial2 == '')]
     input[is.na(middle_initial_na), middle_initial_na := 1]
   }
+
   # Updated combined name
-  if(all(c('first_name_noblank', 'last_name_noblank', 'middle_name') %in% v)){
+  if(all(c('first_name_noblank', 'last_name_noblank', 'middle_name_noblank') %in% v)){
 
-    input[, complete_name_noblank1 := paste0(first_name1,ifelse(nchar(middle_name1)>1, middle_name1, ''), last_name_noblank1)]
-    input[, complete_name_noblank2 := paste0(first_name2,ifelse(nchar(middle_name2)>1, middle_name2, ''), last_name_noblank2)]
+    input[, complete_name_noblank1 := paste0(first_name_noblank1,ifelse(nchar(middle_name_noblank1)>1, middle_name_noblank1, ''), last_name_noblank1)]
+    input[, complete_name_noblank2 := paste0(first_name_noblank2,ifelse(nchar(middle_name_noblank2)>1, middle_name_noblank2, ''), last_name_noblank2)]
 
-    input[!is.na(complete_name_noblank1 | !is.na(complete_name_noblank2)),
+    input[!is.na(complete_name_noblank1) & !is.na(complete_name_noblank2),
           full_name_cosine3_mid := stringdist::stringdist(complete_name_noblank1,
                                                          complete_name_noblank2,
                                                          'cosine', q = 3)]
     input[is.na(full_name_cosine3_mid), full_name_cosine3_mid := 1]
+    input[, full_name_cosine3_nomid := full_name_cosine3]
+
+    input[full_name_cosine3< full_name_cosine3_mid, full_name_cosine3 := full_name_cosine3_nomid]
 
   }
+
 
   # ZIP code
   # same, NA, and mega meter
