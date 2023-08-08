@@ -26,7 +26,7 @@ fit_link = function(train, formula, ensemble = default_ensemble(), bounds = c(.0
 
   # fit the models
   # start with logistic regression
-  screen = stats::glm(form, family = 'binomial', data = train)
+  screen = stats::glm(formula, family = 'binomial', data = train)
   screen = butcher::butcher(screen)
 
   # in sample training predictions
@@ -37,7 +37,7 @@ fit_link = function(train, formula, ensemble = default_ensemble(), bounds = c(.0
 
   folds = rsample::vfold_cv(trainsub, v = 5)
 
-  link_rec = recipes::recipe(trainsub, formula = form)
+  link_rec = recipes::recipe(trainsub, formula = formula)
 
 
   wrk = workflowsets::workflow_set(preproc = list(data =link_rec),

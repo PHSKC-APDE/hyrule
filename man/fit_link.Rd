@@ -4,7 +4,12 @@
 \alias{fit_link}
 \title{Fit a linkage model (screening model + a stacked ensemble}
 \usage{
-fit_link(train, formula, ensemble = default_ensemble())
+fit_link(
+  train,
+  formula,
+  ensemble = default_ensemble(),
+  bounds = c(0.001, 0.999)
+)
 }
 \arguments{
 \item{train}{data.frame containing the training data}
@@ -12,6 +17,9 @@ fit_link(train, formula, ensemble = default_ensemble())
 \item{formula}{formula. The formula to fit}
 
 \item{ensemble}{a named list of parsnip model specifications}
+
+\item{bounds}{numeric. Two numbers (0-1) representing the predicted probability bounds from the screening model that should be fit with the ensemble.
+Results outside these bounds are considered clear enough (not-)matches to not need further processing.}
 }
 \description{
 Fit a linkage model (screening model + a stacked ensemble

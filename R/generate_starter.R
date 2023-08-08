@@ -44,7 +44,7 @@ generate_starter = function(variables = c('first_name', 'last_name', 'date_of_bi
            xy2 = if('location' %in% variables) location_history_one else NULL,
            ph1 = if('phone' %in% variables) phone_history_one else NULL,
            ph2 = if('phone' %in% variables) phone_history_one else NULL,
-           geom_zip = fake_zip)
+           geom_zip = if('zip' %in% variables) fake_zip else NULL)
   a = a[!sapply(a, is.null)]
 
   train = do.call(compute_variables,

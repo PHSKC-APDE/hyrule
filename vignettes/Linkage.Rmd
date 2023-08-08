@@ -150,6 +150,12 @@ blocks = lapply(posyears, function(x){
 
 ## Transfer learning
 
-In general, I recommend starting with a pre-trained model and using those models to make an initial pass at your data. If you are luckily, the previously trained model is good enough and your job is done. More likely, you'll want to use these initial predictions to inform how you select pairs to manually identify as a match or not. It is probably better to use a a model fit on "real" data (ask Daniel about what is available), but if that is not available, you can use `hyrule::generate_starter()` to create a model fit on fake data.
+In general, I recommend starting with a pre-trained model and using those models to make an initial pass at your data. If you are luckily, the previously trained model is good enough and your job is done. More likely, you'll want to use these initial predictions to inform how you select pairs to manually identify as a match or not. It is probably better to use a a model fit on "real" data (ask Daniel about what is available), but if that is not available, you can use `hyrule::generate_starter()` to create a model fit on fake data. See `?hyrule::generate_starter()` for more details about the various arguments
 
 Note: This example will be a little weird since we are fitting a model on the same fake data that is standing in as the "real" data for this vignette. Usually this won't be a problem.
+
+```{r, warning=FALSE}
+starter = hyrule::generate_starter(variables = c('first_name', 'last_name', 'date_of_birth'), match_prop = .5)
+```
+
+\

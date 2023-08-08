@@ -27,10 +27,9 @@ predict.hyrule_link = function(object, new_data, members = F, opts = list(), ...
   res = merge(res, stk, all.x = T, by = 'rowid')
   res[, final := screen]
   res[!is.na(ens), final := ens]
+  res[, rowid := NULL]
   data.table::setDF(res)
 
   res
-
-
 
 }
