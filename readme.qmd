@@ -4,4 +4,14 @@ format: gfm
 editor: visual
 ---
 
-`hyrule` is a package that contains a few routines to facilitate machine learning record linkage (MLRL) via ensemble model approach (stacking). For now, review "Getting Started with Hyrule" vignette.
+`hyrule` is a package that contains a few routines to facilitate machine learning record linkage (MLRL) via ensemble model approach (stacking). For now, review ["Getting Started with Hyrule"](Linkage.md) vignette.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+
+rmarkdown::render('vignettes/Linkage.Rmd', 
+                  output_format = 'github_document',
+                  output_dir = getwd(),
+                  params = list(output = 'github_document'),
+                  quiet = TRUE)
+file.remove('Linkage.html')
+```
