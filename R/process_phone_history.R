@@ -7,6 +7,7 @@
 #' @importFrom data.table setnames
 #' @importFrom stringr str_replace_all
 #' @importFrom stringdist stringdist
+#' @importFrom stats median na.omit
 process_phone_history = function(pairs, ph1, id1, ph2, id2){
   pairs = unique(pairs[, .SD, .SDcols = c(id1, id2)])
 
@@ -46,7 +47,7 @@ process_phone_history = function(pairs, ph1, id1, ph2, id2){
 
   # keep only the minimum among pairs
   i = pairs[, .I[which.min(phone_dist)], c(id1, id2)]$V1
-  pairs = pairs[i, ]
+  pairs = pairs[i, .SD, .SDcols = c(id1, id2, 'phone_number.x', 'phone_number.y', 'phone_dist', 'phone_mis')]
 
   # Add on the median n at number stuff
   pairs = merge(pairs, mnn1, all.x = T, by = id1)

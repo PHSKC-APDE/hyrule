@@ -4,7 +4,7 @@
 \alias{predict.hyrule_link}
 \title{Predicting with a hyrule_link}
 \usage{
-predict.hyrule_link(object, new_data, members = F, opts = list(), ...)
+\method{predict}{hyrule_link}(object, new_data, members = F, opts = list(), ...)
 }
 \arguments{
 \item{object}{hyrule_link object}

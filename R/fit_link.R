@@ -33,7 +33,8 @@ fit_link = function(train, formula, ensemble = default_ensemble(), bounds = c(.0
   s1 = predict(screen, train, type = 'response')
   train[, ('stage1') := s1]
   trainsub = train[data.table::between(stage1, bounds[1], bounds[2])]
-  trainsub[, pair := factor(pair)]
+  fchar = as.character(formula)
+  trainsub[, (fchar[2]) := factor(get(fchar[2]))]
 
   folds = rsample::vfold_cv(trainsub, v = 5)
 
@@ -52,7 +53,7 @@ fit_link = function(train, formula, ensemble = default_ensemble(), bounds = c(.0
   res = butcher::butcher(res)
 
   obj = list(screen = screen, stack = res, bounds = bounds)
-  class(obj) <- c('hyrule_link', class(obj))
+  class(obj) <- c('hyrule_link')
   return(obj)
 
 }

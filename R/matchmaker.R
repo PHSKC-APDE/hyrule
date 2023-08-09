@@ -5,6 +5,7 @@
 #' @importFrom fs path_home
 #' @importFrom tools file_ext
 #' @importFrom DT DTOutput renderDT
+#' @importFrom utils write.csv
 matchmaker = function(...){
 
   ui <- fluidPage(

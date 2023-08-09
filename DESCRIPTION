@@ -31,7 +31,8 @@ Imports:
     stringr,
     units,
     workflowsets,
-    butcher
+    butcher,
+    stats
 Suggests: 
     knitr,
     rmarkdown

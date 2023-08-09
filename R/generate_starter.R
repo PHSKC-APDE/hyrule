@@ -5,6 +5,7 @@
 #' @export
 #' @importFrom sf read_sf
 #' @importFrom data.table CJ data.table between
+#' @importFrom stats as.formula
 generate_starter = function(variables = c('first_name', 'last_name', 'date_of_birth'), match_prop = .3){
   n = 9000
 
