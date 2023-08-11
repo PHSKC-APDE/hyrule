@@ -13,6 +13,7 @@ prep_data_for_linkage(
   zip = NULL,
   ssn = NULL,
   sex = NULL,
+  id = NULL,
   name_heuristics = TRUE
 )
 }
@@ -29,9 +30,11 @@ prep_data_for_linkage(
 
 \item{zip}{character. Default is NULL. Column that includes ZIP code data}
 
-\item{ssn}{character: column of social security number}
+\item{ssn}{character. column of social security number}
 
-\item{sex}{character: Column specifiyng}
+\item{sex}{character. Column specifiyng sex/gender information.}
+
+\item{id}{character. Column containing a unique row level id}
 
 \item{name_heuristics}{logical. Indicates whether common name cleaning heuristics should be implemented}
 }

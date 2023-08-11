@@ -127,22 +127,22 @@ variables commonly used in data linkage. These include name, date of
 birth, ZIP code, sex, and social security number.
 
 ``` r
-clean_d1 = prep_data_for_linkage(d1, first_name = 'first_name',
-                                 last_name = 'last_name',
-                                 dob = 'date_of_birth',
-                                 middle_name = 'middle_initial',
-                                 zip = 'zip',
-                                 sex = 'sex')
-clean_d2 = prep_data_for_linkage(d2, first_name = 'first_name',
-                                 last_name = 'last_name',
-                                 dob = 'date_of_birth',
-                                 middle_name = 'middle_initial',
-                                 zip = 'zip',
-                                 sex = 'sex')
-
-# Add back some relevant variables
-d1 = cbind(d1[, .(id1)], clean_d1)
-d2 = cbind(d2[, .(id2)], clean_d2)
+d1 = prep_data_for_linkage(d1, 
+                           first_name = 'first_name',
+                           last_name = 'last_name',
+                           dob = 'date_of_birth',
+                           middle_name = 'middle_initial',
+                           zip = 'zip',
+                           sex = 'sex',
+                           id = 'id1')
+d2 = prep_data_for_linkage(d2,
+                           first_name = 'first_name',
+                           last_name = 'last_name',
+                           dob = 'date_of_birth',
+                           middle_name = 'middle_initial',
+                           zip = 'zip',
+                           sex = 'sex',
+                           id = 'id2')
 
 # Make a copy for a demonstration later one
 # usually you won't need/want to do this
@@ -281,7 +281,7 @@ preds[, decile := cut(final,seq(0,1,.1))]
 
 # Select 15 rows for each
 preds[, pairid := .I]
-trainme = preds[, sample(pairid, 25), decile]
+trainme = preds[, sample(pairid, min(c(.N,25))), decile]
 trainme = preds[trainme[, V1], .(id1, id2)]
 knitr::kable(head(trainme))
 ```
@@ -290,12 +290,12 @@ knitr::kable(head(trainme))
 
 | id1     | id2     |
 |:--------|:--------|
-| 0_215   | 0_215   |
-| 0_15670 | 0_15670 |
-| 0_3916  | 0_6660  |
-| 0_17212 | 0_11624 |
-| 0_6019  | 0_180   |
-| 0_4195  | 0_4195  |
+| 0_5160  | 0_5160  |
+| 0_10556 | 0_11011 |
+| 0_14664 | 0_14580 |
+| 0_18062 | 0_18062 |
+| 0_4609  | 0_4609  |
+| 0_73    | 0_16933 |
 
 </div>
 

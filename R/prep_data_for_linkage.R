@@ -5,8 +5,9 @@
 #' @param dob character. Identifies the column with date of birth
 #' @param middle_name character identifying the column with middle name (or middle initial)
 #' @param zip character. Default is NULL. Column that includes ZIP code data
-#' @param ssn character: column of social security number
-#' @param sex character: Column specifiyng
+#' @param ssn character. column of social security number
+#' @param sex character. Column specifiyng sex/gender information.
+#' @param id character. Column containing a unique row level id
 #' @param name_heuristics logical. Indicates whether common name cleaning heuristics should be implemented
 #' @export
 #' @importFrom data.table setDT tstrsplit year month mday setDF
@@ -22,6 +23,7 @@ prep_data_for_linkage = function(d,
                                  zip = NULL,
                                  ssn = NULL,
                                  sex = NULL,
+                                 id = NULL,
                                  name_heuristics = TRUE){
   stopifnot(inherits(d, 'data.frame'))
   wasDT = is.data.table(d)
@@ -29,14 +31,18 @@ prep_data_for_linkage = function(d,
 
   # make sure all variables are within d
   cols = list(first_name = first_name, last_name = last_name, dob = dob,
-              zip = zip, middle_name = middle_name, ssn = ssn, sex = sex)
+              zip = zip, middle_name = middle_name, ssn = ssn, sex = sex, id = id)
   cols = unlist(cols)
   mis = setdiff(cols, names(d))
   if(length(mis)>0) stop(paste0('Missing the following columns: ', paste(mis, collapse =',')))
 
   # Keep only the columns to be cleaned
   d = d[, .SD, .SDcols = cols]
-  setnames(d, cols, names(cols))
+  setnames(d, setdiff(cols, id), setdiff(names(cols), 'id'))
+
+  if('id' %in% names(cols)){
+    stopifnot(!anyDuplicated(d[[id]]))
+  }
 
   # sex
   if('sex' %in% names(cols)){
