@@ -16,9 +16,11 @@ predict.hyrule_link = function(object, new_data, members = F, opts = list(), ...
   # make predictions for the screening model
   s1 = predict(object$screen, new_data, type = 'response')
 
-  if(any(data.table::between(s1, object$bounds[1], object$bounds[2]))){
+  if(any(data.table::between(na.omit(s1), object$bounds[1], object$bounds[2]))){
 
-    stk = predict(object$stack, new_data[data.table::between(s1, object$bounds[1], object$bounds[2]),],
+    good_rows = which(!is.na(s1) & data.table::between(s1, object$bounds[1], object$bounds[2]))
+
+    stk = predict(object$stack, new_data[good_rows,],
                   type = 'prob', members = members, opts = opts)
 
     # keep only prediction of match
@@ -29,7 +31,7 @@ predict.hyrule_link = function(object, new_data, members = F, opts = list(), ...
 
     res = data.table::data.table(screen = s1)
     res[, rowid := .I]
-    stk$rowid = res$rowid[between(s1, object$bounds[1], object$bounds[2]) ]
+    stk$rowid = good_rows
     res = merge(res, stk, all.x = T, by = 'rowid')
     res[, final := screen]
     res[!is.na(ens), final := ens]

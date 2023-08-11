@@ -25,9 +25,11 @@ process_location_history = function(pairs, xy1, id1, xy2, id2){
   # compute distance
   dist = st_distance(xy1, xy2)
   dist = data.table::data.table(dist)
-  setnames(dist, xy2[[id2]])
+  wasnumeric = is.numeric(xy2[[id2]])
+  setnames(dist, as.character(xy2[[id2]]))
   dist[, (id1) := xy1[[id1]]]
   dist = melt(dist, id.vars = id1, variable.name = id2, variable.factor = FALSE)
+  if(wasnumeric) dist[, (id2) := as.numeric(get(id2))]
 
   # for each pair, find the minimum distance between geocoded addresses
   # subset by pairs we care about
@@ -35,6 +37,7 @@ process_location_history = function(pairs, xy1, id1, xy2, id2){
   dist = dist[, .(min_loc_distance = min(value)), c(id1, id2)]
   dist[, min_loc_distance := as.numeric(units::set_units(min_loc_distance, 'm'))]
   dist[, exact_location := as.integer(min_loc_distance < 3)]
+  dist[, value := NULL]
 
   pairs = merge(pairs, dist, all.x = T, by = c(id1,id2))
   pairs[is.na(exact_location), exact_location := 0L]

@@ -53,6 +53,7 @@ process_phone_history = function(pairs, ph1, id1, ph2, id2){
   pairs = merge(pairs, mnn1, all.x = T, by = id1)
   pairs = merge(pairs, mnn2, all.x = T, by = id2)
   pairs[, max_N_at_number := (max_N_at_number.x + max_N_at_number.y)/2 ]
+  pairs[is.na(max_N_at_number), max_N_at_number := pairs[, mean(max_N_at_number, na.rm = T)]]
   pairs[, paste0('max_N_at_number.', c('x','y')) := NULL]
   data.table::setnames(pairs, paste0('phone_number', c('.x','.y')), paste0('phone_number', 1:2))
 

@@ -31,8 +31,7 @@ fit_link = function(train, formula, ensemble = default_ensemble(), bounds = c(.0
 
   # in sample training predictions
   s1 = predict(screen, train, type = 'response')
-  train[, ('stage1') := s1]
-  trainsub = train[data.table::between(stage1, bounds[1], bounds[2])]
+  trainsub = train[data.table::between(s1, bounds[1], bounds[2])]
   fchar = as.character(formula)
   trainsub[, (fchar[2]) := factor(get(fchar[2]))]
 

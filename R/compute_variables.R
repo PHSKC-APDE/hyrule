@@ -8,7 +8,7 @@
 #' @param xy2 sf. Coordinates per record for  `d2` for those rows that have them. Must be in the same CRS as `xy1` and have an `id2` column. Ideally, its best to pass things geocoded to a level finer than a ZIP code
 #' @param ph1 data.frame/data.table with (at least) two columns: `id1` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
 #' @param ph2 data.frame/data.table with (at least) two columns: `id2` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
-#' @param geom_zip sf object of ZIP codes. Must have a column named `zip`. `tigris::zctas` is (with a bit of modification) a decent place to start.
+#' @param geom_zip sf object of ZIP codes. Must have a column named `zip`. `tigris::zctas` is (with a bit of modification) a decent place to start. You may want to do custom coding if you have more than one ZIP per record to choose the minimum one.
 #' @export
 #' @details
 #' `pairs`, `d1`, `d2`, `ph1`, and `ph2` will all be converted into data.tables internally.
@@ -168,7 +168,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
     input[is.na(full_name_cosine3_mid), full_name_cosine3_mid := 1]
     input[, full_name_cosine3_nomid := full_name_cosine3]
 
-    input[full_name_cosine3< full_name_cosine3_mid, full_name_cosine3 := full_name_cosine3_nomid]
+    input[full_name_cosine3 > full_name_cosine3_mid, full_name_cosine3 := full_name_cosine3_mid]
 
   }
 
@@ -191,6 +191,10 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
       dist[, c('zip1', 'zip2') := list(as.character(zip1), as.character(zip2))]
 
       input = merge(input, dist, all.x = T, by = c('zip1', 'zip2'))
+
+      # For missing ZIPs, use average
+      input[is.na(zip_Mm), zip_Mm := input[, mean(zip_Mm, na.rm = T)]]
+
     }
 
   }
