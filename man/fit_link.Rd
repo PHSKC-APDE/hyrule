@@ -8,7 +8,8 @@ fit_link(
   train,
   formula,
   ensemble = default_ensemble(),
-  bounds = c(0.001, 0.999)
+  bounds = c(0.001, 0.999),
+  stage_one_only = FALSE
 )
 }
 \arguments{
@@ -20,6 +21,8 @@ fit_link(
 
 \item{bounds}{numeric. Two numbers (0-1) representing the predicted probability bounds from the screening model that should be fit with the ensemble.
 Results outside these bounds are considered clear enough (not-)matches to not need further processing.}
+
+\item{stage_one_only}{logical. Whether to return the stage one results so that models can be custom implemented with the larger tidy models universe}
 }
 \description{
 Fit a linkage model (screening model + a stacked ensemble

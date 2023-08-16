@@ -25,7 +25,7 @@ compute_variables(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_zip)
 
 \item{ph2}{data.frame/data.table with (at least) two columns: `id2` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`}
 
-\item{geom_zip}{sf object of ZIP codes. Must have a column named `zip`. `tigris::zctas` is (with a bit of modification) a decent place to start.}
+\item{geom_zip}{sf object of ZIP codes. Must have a column named `zip`. `tigris::zctas` is (with a bit of modification) a decent place to start. You may want to do custom coding if you have more than one ZIP per record to choose the minimum one.}
 }
 \description{
 Create variables for linkage

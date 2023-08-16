@@ -241,7 +241,7 @@ Once your training dataset is manually labeled, we need to fit the ensemble on t
 
 ```{r}
 #usually you will load the matchmaker results from disk
-trainme[, ismatch := as.integer(id1 == id2)]
+trainme[, ismatch := factor(as.integer(id1 == id2))]
 
 ```
 
@@ -249,8 +249,10 @@ Once loaded we need to run `hyrule::compute_variables` and do other variable cre
 
 ```{r}
 # doing this again, for fun.
-matchprep[, ismatch := id1 == id2]
+matchprep[, ismatch := factor(is.integer(id1 == id2))]
 ```
+
+In this example, ismatch is cast as a factor with two levels: 0 and 1. Factors are used because the tidymodels/parsnip classification framework requires things to be factors.
 
 ### Deciding on the formula
 
