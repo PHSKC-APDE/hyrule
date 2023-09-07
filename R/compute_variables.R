@@ -25,6 +25,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
 
   # Validate inputs
   stopifnot(is.data.frame(pairs))
+  stopifnot(!any(names(pairs) %in% '_rid'))
   stopifnot(is.data.frame(d1))
   stopifnot(is.data.frame(d2))
   stopifnot(missing(xy1) && missing(xy2) || (!missing(xy1) && !missing(xy2)))
@@ -50,6 +51,8 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
 
   useDT = any(is.data.table(pairs) | is.data.table(d1) | is.data.table(d2))
   setDT(pairs); setDT(d1); setDT(d2)
+  pairs[, `_rid` := .I]
+
 
   # make sure id1 and id2 are uniquely identifying
   stopifnot('id1 does not uniquely identify rows in d1' = d1[, .N, c(id1)][, all(N == 1)])
@@ -209,6 +212,9 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
     ph = process_phone_history(pairs, ph1, id1, ph2, id2)
     input = merge(input, ph, all.x = T, by = c(id1, id2))
   }
+
+  setorder(input, '_rid')
+  input[, `_rid` := NULL]
 
   return(input)
 }
