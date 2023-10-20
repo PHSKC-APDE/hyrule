@@ -32,6 +32,8 @@ Imports:
     units,
     workflowsets,
     butcher,
+    tune,
+    workflows,
     stats
 Suggests: 
     knitr,

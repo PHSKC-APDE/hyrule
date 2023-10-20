@@ -50,6 +50,7 @@ generate_starter = function(variables = c('first_name', 'last_name', 'date_of_bi
 
   train = do.call(compute_variables,
                   args = a)
+  train[, pair := factor(pair, 0:1, 0:1)]
 
   # make the formula
   form = list(first_name = c('first_name_cos2'), #'first_name_jw'

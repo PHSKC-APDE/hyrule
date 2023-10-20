@@ -9,7 +9,9 @@ fit_link(
   formula,
   ensemble = default_ensemble(),
   bounds = c(0.001, 0.999),
-  stage_one_only = FALSE
+  stage_one_only = FALSE,
+  lasso = F,
+  penalty_seq = seq(1e-04, 0.1, length.out = 200)
 )
 }
 \arguments{
@@ -23,6 +25,10 @@ fit_link(
 Results outside these bounds are considered clear enough (not-)matches to not need further processing.}
 
 \item{stage_one_only}{logical. Whether to return the stage one results so that models can be custom implemented with the larger tidy models universe}
+
+\item{lasso}{logical. Whether a standard GLM (F, the default) or a lasso regression (T) should be used as the screening model}
+
+\item{penalty_seq}{numeric. Vector of numeric values [0-1] denoting possible penalties}
 }
 \description{
 Fit a linkage model (screening model + a stacked ensemble

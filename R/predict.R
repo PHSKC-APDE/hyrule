@@ -14,7 +14,7 @@ predict.hyrule_link = function(object, new_data, members = F, opts = list(), ...
   stopifnot(is.logical(members))
 
   # make predictions for the screening model
-  s1 = predict(object$screen, new_data, type = 'response')
+  s1 = predict(object$screen, new_data, type = 'prob')[,'.pred_1', drop = T]
 
   if(any(data.table::between(na.omit(s1), object$bounds[1], object$bounds[2]))){
 

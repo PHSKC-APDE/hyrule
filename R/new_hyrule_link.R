@@ -5,7 +5,7 @@
 #' @export
 new_hyrule_link = function(screen, stack, bounds){
 
-  stopifnot(inherits(screen, 'glm'))
+  stopifnot(inherits(screen, 'model_fit')) # fit by parsnip logistic regression
   stopifnot(is.numeric(bounds))
   stopifnot(all(bounds<1 & bounds>0))
   stopifnot(bounds[1]<bounds[2])

@@ -60,7 +60,6 @@ prep_data_for_linkage = function(d,
     }
     d[, first_name_noblank := gsub(' ', '', first_name)]
 
-
   }
   # Last Name
   if('last_name' %in% names(cols)){

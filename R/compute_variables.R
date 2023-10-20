@@ -15,7 +15,7 @@
 #' There is a slight chance this change the objects in the parent environment
 #'
 #' @importFrom sf st_crs st_distance st_centroid
-#' @importFrom data.table setnames data.table
+#' @importFrom data.table setnames data.table copy
 #' @importFrom units set_units
 #' @importFrom stringdist stringdist
 compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_zip){
@@ -51,7 +51,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
 
   useDT = any(is.data.table(pairs) | is.data.table(d1) | is.data.table(d2))
   setDT(pairs); setDT(d1); setDT(d2)
-  pairs[, `_rid` := .I]
+  pairs = copy(pairs)[, `_rid` := .I]
 
 
   # make sure id1 and id2 are uniquely identifying
@@ -161,8 +161,8 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   # Updated combined name
   if(all(c('first_name_noblank', 'last_name_noblank', 'middle_name_noblank') %in% v)){
 
-    input[, complete_name_noblank1 := paste0(first_name_noblank1,ifelse(nchar(middle_name_noblank1)>1, middle_name_noblank1, ''), last_name_noblank1)]
-    input[, complete_name_noblank2 := paste0(first_name_noblank2,ifelse(nchar(middle_name_noblank2)>1, middle_name_noblank2, ''), last_name_noblank2)]
+    input[, complete_name_noblank1 := pastenm(first_name_noblank1,ifelse(nchar(middle_name_noblank1)>1, middle_name_noblank1, ''), last_name_noblank1)]
+    input[, complete_name_noblank2 := pastenm(first_name_noblank2,ifelse(nchar(middle_name_noblank2)>1, middle_name_noblank2, ''), last_name_noblank2)]
 
     input[!is.na(complete_name_noblank1) & !is.na(complete_name_noblank2),
           full_name_cosine3_mid := stringdist::stringdist(complete_name_noblank1,
@@ -172,7 +172,6 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
     input[, full_name_cosine3_nomid := full_name_cosine3]
 
     input[full_name_cosine3 > full_name_cosine3_mid, full_name_cosine3 := full_name_cosine3_mid]
-
   }
 
 
@@ -215,6 +214,8 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
 
   setorder(input, '_rid')
   input[, `_rid` := NULL]
+
+
 
   return(input)
 }

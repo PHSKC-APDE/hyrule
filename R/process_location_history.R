@@ -9,10 +9,12 @@
 #' `exact_location` is a binary flag indicating that the pair has at least one geocoded location within 3 meters.
 #' `min_loc_distance` is the minimum distance observed between a record pair in meters
 #'
-#' @importFrom sf st_geometry_type st_centroid
+#' @importFrom sf st_geometry_type st_centroid st_distance
+#' @importFrom data.table set data.table
+#' @importFrom units set_units
 process_location_history = function(pairs, xy1, id1, xy2, id2){
   pairs = unique(pairs[, .SD, .SDcols = c(id1, id2)])
-  # most checks for xy1 and xy2 should have occured already
+
 
   # double check input geogs are points
   stopifnot(all(sf::st_geometry_type(xy1) %in% 'POINT'))
@@ -22,14 +24,19 @@ process_location_history = function(pairs, xy1, id1, xy2, id2){
   xy1 = xy1[xy1[[id1]] %in% pairs[[id1]],]
   xy2 = xy2[xy2[[id2]] %in% pairs[[id2]],]
 
+  # most checks for xy1 and xy2 should have occured already
+  if(nrow(xy1) == 0 | nrow(xy2) == 0){
+    return(pairs[, exact_location := 0])
+  }
+
   # compute distance
-  dist = st_distance(xy1, xy2)
+  dist = sf::st_distance(xy1, xy2)
   dist = data.table::data.table(dist)
   wasnumeric = is.numeric(xy2[[id2]])
   setnames(dist, as.character(xy2[[id2]]))
   dist[, (id1) := xy1[[id1]]]
   dist = melt(dist, id.vars = id1, variable.name = id2, variable.factor = FALSE)
-  if(wasnumeric) dist[, (id2) := as.numeric(get(id2))]
+  if(wasnumeric) data.table::set(dist, j = id2, value = as.numeric(dist[[id2]]))
 
   # for each pair, find the minimum distance between geocoded addresses
   # subset by pairs we care about
