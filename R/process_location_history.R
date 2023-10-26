@@ -10,11 +10,10 @@
 #' `min_loc_distance` is the minimum distance observed between a record pair in meters
 #'
 #' @importFrom sf st_geometry_type st_centroid st_distance
-#' @importFrom data.table set data.table
-#' @importFrom units set_units
+#' @importFrom data.table set data.table as.data.table
+#' @importFrom units set_units drop_units
 process_location_history = function(pairs, xy1, id1, xy2, id2){
   pairs = unique(pairs[, .SD, .SDcols = c(id1, id2)])
-
 
   # double check input geogs are points
   stopifnot(all(sf::st_geometry_type(xy1) %in% 'POINT'))
@@ -29,22 +28,32 @@ process_location_history = function(pairs, xy1, id1, xy2, id2){
     return(pairs[, exact_location := 0])
   }
 
+  crs = st_crs(xy1)
+
+  xy1 = data.table::as.data.table(sf::st_coordinates(xy1))[, (id1) := xy1[[id1]]]
+  xy2 = data.table::as.data.table(sf::st_coordinates(xy2))[, (id2) := xy2[[id2]]]
+  dist = merge(pairs[, .SD, .SDcols = c(id1, id2)],xy1, all.x = T, by = id1, allow.cartesian = T)
+  dist = dist[!is.na(X)]
+  dist = merge(dist, xy2, all.x = T, by = id2, allow.cartesian = T)
+  dist = dist[!is.na(X.y)]
+
+  # Keep only entries with non missing
+
   # compute distance
-  dist = sf::st_distance(xy1, xy2)
-  dist = data.table::data.table(dist)
-  wasnumeric = is.numeric(xy2[[id2]])
-  setnames(dist, as.character(xy2[[id2]]))
-  dist[, (id1) := xy1[[id1]]]
-  dist = melt(dist, id.vars = id1, variable.name = id2, variable.factor = FALSE)
-  if(wasnumeric) data.table::set(dist, j = id2, value = as.numeric(dist[[id2]]))
+  dres = sf::st_distance(st_as_sf(dist, coords = c('X.x', 'Y.x'), crs = crs), st_as_sf(dist, coords = c('X.y', 'Y.y'), crs = crs), by_element = T)
+  ut = attributes(dres)$units
+  dist = dist[, .SD, .SDcols = c(id1,id2)][, value := as.numeric(dres)]
 
   # for each pair, find the minimum distance between geocoded addresses
   # subset by pairs we care about
   dist = merge(dist, pairs, by = c(id1, id2))
   dist = dist[, .(min_loc_distance = min(value)), c(id1, id2)]
-  dist[, min_loc_distance := as.numeric(units::set_units(min_loc_distance, 'm'))]
+
+  # Find the conversion from the input unit to the desired unit
+  to_meter = units::set_units(units::as_units(1, ut$numerator), 'm')
+
+  dist[, min_loc_distance := min_loc_distance * as.numeric(to_meter)]
   dist[, exact_location := as.integer(min_loc_distance < 3)]
-  dist[, value := NULL]
 
   pairs = merge(pairs, dist, all.x = T, by = c(id1,id2))
   pairs[is.na(exact_location), exact_location := 0L]

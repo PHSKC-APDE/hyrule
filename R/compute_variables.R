@@ -9,6 +9,7 @@
 #' @param ph1 data.frame/data.table with (at least) two columns: `id1` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
 #' @param ph2 data.frame/data.table with (at least) two columns: `id2` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
 #' @param geom_zip sf object of ZIP codes. Must have a column named `zip`. `tigris::zctas` is (with a bit of modification) a decent place to start. You may want to do custom coding if you have more than one ZIP per record to choose the minimum one.
+#' @param make_cn logical. Flag whether complete name metrics should be computed if the relevant parts are available.
 #' @export
 #' @details
 #' `pairs`, `d1`, `d2`, `ph1`, and `ph2` will all be converted into data.tables internally.
@@ -18,7 +19,7 @@
 #' @importFrom data.table setnames data.table copy
 #' @importFrom units set_units
 #' @importFrom stringdist stringdist
-compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_zip){
+compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_zip, make_cn = T){
 
   # Hamming distance
   ham = function(x,y) stringdist::stringdist(as.character(x), as.character(y), 'hamming')
@@ -136,15 +137,15 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   }
 
   # combined name
-  if(all(c('first_name_noblank', 'last_name_noblank') %in% v)){
+  if(all(c('first_name_noblank', 'last_name_noblank') %in% v) && make_cn){
     input[, firstlast_noblank1 := paste0(first_name_noblank1, last_name_noblank1)]
     input[, firstlast_noblank2 := paste0(first_name_noblank2, last_name_noblank2)]
 
 
 
     input[!is.na(first_name_noblank1) & !is.na(last_name_noblank1) & !is.na(first_name_noblank2) & !is.na(last_name_noblank2),
-          full_name_cosine3 := stringdist::stringdist(paste0(first_name_noblank1, last_name_noblank1),
-                                 paste0(first_name_noblank2, first_name_noblank2),
+          full_name_cosine3 := stringdist::stringdist(firstlast_noblank1,
+                                 firstlast_noblank2,
                                  'cosine', q = 3)]
     input[is.na(full_name_cosine3), full_name_cosine3 := 1]
 
@@ -159,7 +160,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   }
 
   # Updated combined name
-  if(all(c('first_name_noblank', 'last_name_noblank', 'middle_name_noblank') %in% v)){
+  if(all(c('first_name_noblank', 'last_name_noblank', 'middle_name_noblank') %in% v) && make_cn){
 
     input[, complete_name_noblank1 := pastenm(first_name_noblank1,ifelse(nchar(middle_name_noblank1)>1, middle_name_noblank1, ''), last_name_noblank1)]
     input[, complete_name_noblank2 := pastenm(first_name_noblank2,ifelse(nchar(middle_name_noblank2)>1, middle_name_noblank2, ''), last_name_noblank2)]
