@@ -9,7 +9,7 @@
 #' `exact_location` is a binary flag indicating that the pair has at least one geocoded location within 3 meters.
 #' `min_loc_distance` is the minimum distance observed between a record pair in meters
 #'
-#' @importFrom sf st_geometry_type st_centroid st_distance
+#' @importFrom sf st_geometry_type st_centroid st_distance st_as_sf
 #' @importFrom data.table set data.table as.data.table
 #' @importFrom units set_units drop_units
 process_location_history = function(pairs, xy1, id1, xy2, id2){
@@ -40,7 +40,7 @@ process_location_history = function(pairs, xy1, id1, xy2, id2){
   # Keep only entries with non missing
 
   # compute distance
-  dres = sf::st_distance(st_as_sf(dist, coords = c('X.x', 'Y.x'), crs = crs), st_as_sf(dist, coords = c('X.y', 'Y.y'), crs = crs), by_element = T)
+  dres = sf::st_distance(sf::st_as_sf(dist, coords = c('X.x', 'Y.x'), crs = crs), sf::st_as_sf(dist, coords = c('X.y', 'Y.y'), crs = crs), by_element = T)
   ut = attributes(dres)$units
   dist = dist[, .SD, .SDcols = c(id1,id2)][, value := as.numeric(dres)]
 
