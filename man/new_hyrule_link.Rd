@@ -4,7 +4,7 @@
 \alias{new_hyrule_link}
 \title{Create a new hyrule_link object}
 \usage{
-new_hyrule_link(screen, stack, bounds)
+new_hyrule_link(screen, stack, bounds, butcher = T)
 }
 \arguments{
 \item{screen}{a glm screen model from fit_link}
@@ -12,6 +12,8 @@ new_hyrule_link(screen, stack, bounds)
 \item{stack}{a stacked ensemble}
 
 \item{bounds}{two item numberic vector indicatoring the bounds of where stack is relevant}
+
+\item{butcher}{logical. Whether the data, env, and fitted values of stack should be axed}
 }
 \description{
 Create a new hyrule_link object

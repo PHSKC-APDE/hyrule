@@ -4,9 +4,11 @@
 \alias{matchmaker}
 \title{A shiny app to facilitate the creation of a manual labelling of matches}
 \usage{
-matchmaker(...)
+matchmaker(dir = NULL, ...)
 }
 \arguments{
+\item{dir}{the directory to have the file selector start in}
+
 \item{...}{passed to shiny::shinyApp}
 }
 \description{

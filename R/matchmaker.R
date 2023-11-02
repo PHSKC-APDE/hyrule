@@ -1,4 +1,5 @@
 #' A shiny app to facilitate the creation of a manual labelling of matches
+#' @param dir the directory to have the file selector start in
 #' @param ... passed to shiny::shinyApp
 #' @export
 #' @import shiny shinyFiles data.table
@@ -6,7 +7,7 @@
 #' @importFrom tools file_ext
 #' @importFrom DT DTOutput renderDT
 #' @importFrom utils write.csv
-matchmaker = function(...){
+matchmaker = function(dir = NULL, ...){
 
   ui <- fluidPage(
 
@@ -94,7 +95,8 @@ matchmaker = function(...){
     }
 
     # General file handling
-    volumes  = c(wd = getwd(),
+    volumes  = c(main = dir,
+                 wd = getwd(),
                  Home = fs::path_home(),
                  getVolumes()())
     # Pair handling ----
