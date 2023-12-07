@@ -100,11 +100,8 @@ prep_data_for_linkage = function(d,
     sss = stringr::str_extract_all(d$ssn, "[0-9]+")
     sss = lapply(sss, paste, collapse = "")
     sss = substr(sss, 1,9)
-    d[, ssn := sss]
+    d[, ssn := as.integer(sss)]
   }
-
-  ## TODO: Considered putting name frequency here
-
 
   if(!wasDT) data.table::setDF(d)
 

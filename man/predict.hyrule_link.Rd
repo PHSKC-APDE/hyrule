@@ -13,7 +13,7 @@
 
 \item{members}{logical. Whether predictions from the ensemble members should be returned}
 
-\item{opts}{list. OPtion arguments to be passed on to predict.model_stack which passes it on to the prediction routines of the underlying ensemble}
+\item{opts}{list. Option arguments to be passed on to predict.model_stack which passes it on to the prediction routines of the underlying ensemble}
 
 \item{...}{not implemented}
 }

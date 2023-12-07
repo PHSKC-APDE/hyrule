@@ -2,7 +2,7 @@
 #' @param object hyrule_link object
 #' @param new_data data.frame data containing variables to predict on
 #' @param members logical. Whether predictions from the ensemble members should be returned
-#' @param opts list. OPtion arguments to be passed on to predict.model_stack which passes it on to the prediction routines of the underlying ensemble
+#' @param opts list. Option arguments to be passed on to predict.model_stack which passes it on to the prediction routines of the underlying ensemble
 #' @param ... not implemented
 #' @details predict.hyrule_link always requests "prob" type from predict.model_stack
 #' @export
@@ -14,11 +14,15 @@ predict.hyrule_link = function(object, new_data, members = F, opts = list(), ...
   stopifnot(is.logical(members))
 
   # make predictions for the screening model
-  s1 = predict(object$screen, new_data, type = 'prob')[,'.pred_1', drop = T]
-
-  if(any(data.table::between(na.omit(s1), object$bounds[1], object$bounds[2]))){
-
+  if(!is.null(object$screen)){
+    s1 = predict(object$screen, new_data, type = 'prob')[,'.pred_1', drop = T]
     good_rows = which(!is.na(s1) & data.table::between(s1, object$bounds[1], object$bounds[2]))
+  }else{
+    s1 = rep(NA_real_, nrow(new_data))
+    good_rows = seq_len(nrow(new_data))
+  }
+
+  if(any(good_rows)){
 
     stk = predict(object$stack, new_data[good_rows,],
                   type = 'prob', members = members, opts = opts)
@@ -27,7 +31,6 @@ predict.hyrule_link = function(object, new_data, members = F, opts = list(), ...
     stk = stk[, grep('.pred_1', names(stk),value = T)]
     names(stk)[1] <- 'ens'
     names(stk) <- gsub('.pred_1_', '', names(stk), fixed = T)
-
 
     res = data.table::data.table(screen = s1)
     res[, rowid := .I]

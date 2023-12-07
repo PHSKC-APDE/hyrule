@@ -10,6 +10,8 @@
 #' @param ph2 data.frame/data.table with (at least) two columns: `id2` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
 #' @param geom_zip sf object of ZIP codes. Must have a column named `zip`. `tigris::zctas` is (with a bit of modification) a decent place to start. You may want to do custom coding if you have more than one ZIP per record to choose the minimum one.
 #' @param make_cn logical. Flag whether complete name metrics should be computed if the relevant parts are available.
+#' @param default_dob_ham numeric. Default value for dob_ham when one of the DOBs is missing. 3.5 is chosen largely arbitrarily
+#' @param default_zip_mm numeric. Default value for zip_Mm when one of the ZIPs is missing. .1 is chosen arbitrarily
 #' @export
 #' @details
 #' `pairs`, `d1`, `d2`, `ph1`, and `ph2` will all be converted into data.tables internally.
@@ -19,7 +21,7 @@
 #' @importFrom data.table setnames data.table copy
 #' @importFrom units set_units
 #' @importFrom stringdist stringdist
-compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_zip, make_cn = T){
+compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_zip, make_cn = T, default_dob_ham = 3.5, default_zip_mm = .1){
 
   # Hamming distance
   ham = function(x,y) stringdist::stringdist(as.character(x), as.character(y), 'hamming')
@@ -87,8 +89,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
     # Hamming distance of DOB
     input[, dob_ham := ham(dob1, dob2)]
     input[, mis_dob := as.integer(is.na(dob_ham))]
-    input[, mean_dob_ham := mean(dob_ham, na.rm= T)]
-    input[mis_dob == 1, dob_ham := mean_dob_ham]
+    input[mis_dob == 1, dob_ham := default_dob_ham]
 
   }
 
@@ -190,13 +191,14 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
       data.table::setnames(dist, as.character(geom_zip$zip))
       dist[, zip1 := geom_zip$zip]
       dist = melt(dist, id.var = 'zip1', variable.factor = F, variable.name = 'zip2')
+
       dist[, zip_Mm := as.numeric(units::set_units(value, '1e6*m'))]
       dist[, c('zip1', 'zip2') := list(as.character(zip1), as.character(zip2))]
 
       input = merge(input, dist, all.x = T, by = c('zip1', 'zip2'))
 
       # For missing ZIPs, use average
-      input[is.na(zip_Mm), zip_Mm := input[, mean(zip_Mm, na.rm = T)]]
+      input[is.na(zip_Mm), zip_Mm := default_zip_mm]
 
     }
 

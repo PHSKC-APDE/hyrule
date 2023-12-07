@@ -4,11 +4,13 @@
 #' @param id2 character. Column name identifying a ID column in `id2`. Also must exist in `pairs` and `xy2` and `xy2`, if using.
 #' @param ph1 data.frame/data.table with (at least) two columns: `id1` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
 #' @param ph2 data.frame/data.table with (at least) two columns: `id2` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
+#' @param default_phone_dist numeric. Default dl (see stringdist::stringdist) distance when one of a pair of numbers is missing
+#' @param default_mxn numeric. Default max N at number value when missing. Represent number of people associated with phone number. Default value of 1.5 is chosen arbitrarily
 #' @importFrom data.table setnames
 #' @importFrom stringr str_replace_all
 #' @importFrom stringdist stringdist
 #' @importFrom stats median na.omit
-process_phone_history = function(pairs, ph1, id1, ph2, id2){
+process_phone_history = function(pairs, ph1, id1, ph2, id2, default_phone_dist = 6, default_mxn = 1.5){
   pairs = unique(pairs[, .SD, .SDcols = c(id1, id2)])
 
   # clean phone numbers
@@ -43,7 +45,8 @@ process_phone_history = function(pairs, ph1, id1, ph2, id2){
   pairs[, phone_dist := stringdist::stringdist(phone_number.x, phone_number.y, method = 'dl')]
   pairs[phone_dist>10, phone_dist := NA]
   pairs[, phone_mis := as.integer(is.na(phone_dist))]
-  pairs[is.na(phone_dist), phone_dist := mean(pairs[,phone_dist], na.rm = T)]
+
+  pairs[is.na(phone_dist), phone_dist := default_phone_dist]
 
   # keep only the minimum among pairs
   i = pairs[, .I[which.min(phone_dist)], c(id1, id2)]$V1
@@ -53,7 +56,8 @@ process_phone_history = function(pairs, ph1, id1, ph2, id2){
   pairs = merge(pairs, mnn1, all.x = T, by = id1)
   pairs = merge(pairs, mnn2, all.x = T, by = id2)
   pairs[, max_N_at_number := (max_N_at_number.x + max_N_at_number.y)/2 ]
-  pairs[is.na(max_N_at_number), max_N_at_number := pairs[, mean(max_N_at_number, na.rm = T)]]
+
+  pairs[is.na(max_N_at_number), max_N_at_number := default_mxn]
   pairs[, paste0('max_N_at_number.', c('x','y')) := NULL]
   data.table::setnames(pairs, paste0('phone_number', c('.x','.y')), paste0('phone_number', 1:2))
 

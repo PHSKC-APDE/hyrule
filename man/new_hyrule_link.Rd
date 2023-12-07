@@ -7,11 +7,11 @@
 new_hyrule_link(screen, stack, bounds, butcher = T)
 }
 \arguments{
-\item{screen}{a glm screen model from fit_link}
+\item{screen}{a screening model of class model_fit (usually from fit_link), or alternatively, NULL for no screener}
 
 \item{stack}{a stacked ensemble}
 
-\item{bounds}{two item numberic vector indicatoring the bounds of where stack is relevant}
+\item{bounds}{two item numeric vector indicatoring the bounds of where stack is relevant}
 
 \item{butcher}{logical. Whether the data, env, and fitted values of stack should be axed}
 }

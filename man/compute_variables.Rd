@@ -15,7 +15,9 @@ compute_variables(
   ph1,
   ph2,
   geom_zip,
-  make_cn = T
+  make_cn = T,
+  default_dob_ham = 3.5,
+  default_zip_mm = 0.1
 )
 }
 \arguments{
@@ -40,6 +42,10 @@ compute_variables(
 \item{geom_zip}{sf object of ZIP codes. Must have a column named `zip`. `tigris::zctas` is (with a bit of modification) a decent place to start. You may want to do custom coding if you have more than one ZIP per record to choose the minimum one.}
 
 \item{make_cn}{logical. Flag whether complete name metrics should be computed if the relevant parts are available.}
+
+\item{default_dob_ham}{numeric. Default value for dob_ham when one of the DOBs is missing. 3.5 is chosen largely arbitrarily}
+
+\item{default_zip_mm}{numeric. Default value for zip_Mm when one of the ZIPs is missing. .1 is chosen arbitrarily}
 }
 \description{
 Create variables for linkage
