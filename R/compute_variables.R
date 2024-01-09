@@ -184,7 +184,8 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
     input[is.na(zip_agree), zip_agree := 0]
     input[, zip_na := is.na(zip1) | is.na(zip2)]
 
-    if(!missing(geom_zip)){
+    if(!missing(geom_zip) && !all(input[, zip_na])){
+
       geom_zip = subset(geom_zip, zip %in% unique(c(input[, zip1], input[,zip2])))
       geom_zip = sf::st_centroid(geom_zip)
       dist = data.table::data.table(st_distance(geom_zip, geom_zip))
@@ -196,11 +197,12 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
       dist[, c('zip1', 'zip2') := list(as.character(zip1), as.character(zip2))]
 
       input = merge(input, dist, all.x = T, by = c('zip1', 'zip2'))
-
-      # For missing ZIPs, use average
-      input[is.na(zip_Mm), zip_Mm := default_zip_mm]
-
+    }else{
+      input[, zip_Mm := NA_real_]
     }
+
+    # For missing ZIPs, use average
+    input[is.na(zip_Mm), zip_Mm := default_zip_mm]
 
   }
   # location
