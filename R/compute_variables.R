@@ -8,13 +8,15 @@
 #' @param xy2 sf. Coordinates per record for  `d2` for those rows that have them. Must be in the same CRS as `xy1` and have an `id2` column. Ideally, its best to pass things geocoded to a level finer than a ZIP code
 #' @param ph1 data.frame/data.table with (at least) two columns: `id1` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
 #' @param ph2 data.frame/data.table with (at least) two columns: `id2` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
+#' @param zh1 data.frame/data.table containing the ZIP history. Ideally (at least) two columns: `id1` and zip. A given id can have multiple ZIPs associated with it.
+#' @param zh2 data.frame/data.table containing the ZIP history. Ideally (at least) two columns: `id2` and zip. A given id can have multiple ZIPs associated with it.
 #' @param geom_zip sf object of ZIP codes. Must have a column named `zip`. `tigris::zctas` is (with a bit of modification) a decent place to start. You may want to do custom coding if you have more than one ZIP per record to choose the minimum one.
 #' @param make_cn logical. Flag whether complete name metrics should be computed if the relevant parts are available.
 #' @param default_dob_ham numeric. Default value for dob_ham when one of the DOBs is missing. 3.5 is chosen largely arbitrarily
 #' @param default_zip_mm numeric. Default value for zip_Mm when one of the ZIPs is missing. .1 is chosen arbitrarily
 #' @export
 #' @details
-#' `pairs`, `d1`, `d2`, `ph1`, and `ph2` will all be converted into data.tables internally.
+#' `pairs`, `d1`, `d2`, `ph1`, `ph2`, `zh1`, and `zh2` will all be converted into data.tables internally.
 #' There is a slight chance this change the objects in the parent environment
 #'
 #' @importFrom sf st_crs st_distance st_centroid
@@ -33,6 +35,7 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   stopifnot(is.data.frame(d2))
   stopifnot(missing(xy1) && missing(xy2) || (!missing(xy1) && !missing(xy2)))
   stopifnot(missing(ph1) && missing(ph2) || (!missing(ph1) && !missing(ph2)))
+  stopifnot(missing(zh1) && missing(zh2) || (!missing(zh1) && !missing(zh2)))
   stopifnot(length(id1) == 1 & id1 %in% names(d1))
   stopifnot(length(id2) == 1 & id2 %in% names(d2))
   stopifnot('`id1` and `id2` cannot be the same value' = id1 != id2)
@@ -51,6 +54,11 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
     stopifnot(c(id1, 'phone_number') %in% names(ph1))
     stopifnot(c(id2, 'phone_number') %in% names(ph2))
   }
+  if(!missing(zh1) && !missing(zh2)){
+    stopifnot(c(id1, 'zip') %in% names(zh1))
+    stopifnot(c(id2, 'zip') %in% names(zh2))
+  }
+
 
   useDT = any(is.data.table(pairs) | is.data.table(d1) | is.data.table(d2))
   setDT(pairs); setDT(d1); setDT(d2)
@@ -180,14 +188,29 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
   # ZIP code
   # same, NA, and mega meter
   if('zip' %in% v){
-    input[, zip_agree := as.integer(zip1 == zip2)]
-    input[is.na(zip_agree), zip_agree := 0]
-    input[, zip_na := is.na(zip1) | is.na(zip2)]
 
-    if(!missing(geom_zip) && !all(input[, zip_na])){
+    if(!missing(zh1) && !missing(zh2)){
+      data.table::setDT(zh1)
+      data.table::setDT(zh2)
+      zh1 = unique(rbind(zh1[, .(..id1, zip1 = zip)],
+                         input[, .(..id1, zip1 = zip1)]))
+      zh2 = unique(rbind(zh2[, .(..id2, zip2 = zip)],
+                         input[, .(..id2, zip2 = zip2)]))
+    }else{
+      zh1 = unique(input[, .(..id1, zip1 = zip)])
+      zh2 = unique(input[, .(..id2, zip2 = zip)])
+    }
 
-      geom_zip = subset(geom_zip, zip %in% unique(c(input[, zip1], input[,zip2])))
+    zh = merge(input[, .(..id1, ..id2)], zh1, by = id1, all.x = T, allow.cartesian = T)
+    zh = merge(zh, zh2, by = id1, all.x = T, allow.cartesian = T)
+
+
+    if(!missing(geom_zip) && !all(is.na(zh$zip1)) && !all(is.na(zh$zip2))){
+
+      geom_zip = subset(geom_zip, zip %in% unique(c(zh[, zip1], zh[,zip2])))
       geom_zip = sf::st_centroid(geom_zip)
+
+      #TODO: change this to only compute the pairs we need.
       dist = data.table::data.table(st_distance(geom_zip, geom_zip))
       data.table::setnames(dist, as.character(geom_zip$zip))
       dist[, zip1 := geom_zip$zip]
@@ -196,10 +219,20 @@ compute_variables = function(pairs, d1, id1, d2, id2, xy1, xy2, ph1, ph2, geom_z
       dist[, zip_Mm := as.numeric(units::set_units(value, '1e6*m'))]
       dist[, c('zip1', 'zip2') := list(as.character(zip1), as.character(zip2))]
 
-      input = merge(input, dist, all.x = T, by = c('zip1', 'zip2'))
+      zh = merge(zh, dist, all.x = T, by = c('zip1', 'zip2'))
     }else{
-      input[, zip_Mm := NA_real_]
+      zh[, zip_Mm := NA_real_]
     }
+
+
+    zh = zh[, .(zip_agree = any(zip1 == zip2),
+                zip_na = all(is.na(zip1)) || all(is.na(zip2)),
+                zip_Mm = min(zip_Mm, na.rm = T)), .(..id1, ..id2)]
+
+    input[, zip_agree := as.integer(zip1 == zip2)]
+    input[is.na(zip_agree), zip_agree := 0]
+    input[, zip_na := is.na(zip1) | is.na(zip2)]
+
 
     # For missing ZIPs, use average
     input[is.na(zip_Mm), zip_Mm := default_zip_mm]
