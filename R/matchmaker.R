@@ -64,8 +64,8 @@ matchmaker = function(dir = NULL, ...){
                        conditionalPanel("output.showButtons == 1",
                              fluidRow(
                                actionButton('previous', 'Previous'),
-                               actionButton('nomatch', 'NEIN!'),
-                               actionButton('flag', 'FLAG'),
+                               actionButton('nomatch', 'No Match!'),
+                               actionButton('flag', 'Flag'),
                                actionButton('match', 'Match!'),
                                actionButton('nextone', 'Next')
                              ),
