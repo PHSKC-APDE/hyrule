@@ -100,7 +100,8 @@ prep_data_for_linkage = function(d,
     sss = stringr::str_extract_all(d$ssn, "[0-9]+")
     sss = lapply(sss, paste, collapse = "")
     sss = substr(sss, 1,9)
-    d[, ssn := as.integer(sss)]
+    sss[sss == 'NA'] <- NA
+    d[, ssn := (sss)]
   }
 
   if(!wasDT) data.table::setDF(d)

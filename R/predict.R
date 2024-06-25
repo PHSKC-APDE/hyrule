@@ -24,8 +24,14 @@ predict.hyrule_link = function(object, new_data, members = F, opts = list(), ...
 
   if(any(good_rows)){
 
-    stk = predict(object$stack, new_data[good_rows,],
-                  type = 'prob', members = members, opts = opts)
+    if(inherits(object$stack, 'model_stack')){
+      stk = predict(object$stack, new_data[good_rows,],
+                    type = 'prob', members = members, opts = opts)
+    }else{
+      stk = predict(object$stack, new_data[good_rows,],
+                    type = 'prob', opts = opts)
+    }
+
 
     # keep only prediction of match
     stk = stk[, grep('.pred_1', names(stk),value = T)]

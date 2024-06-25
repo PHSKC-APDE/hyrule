@@ -5,7 +5,7 @@
 #' @import shiny shinyFiles data.table
 #' @importFrom fs path_home
 #' @importFrom tools file_ext
-#' @importFrom DT DTOutput renderDT
+#' @importFrom DT DTOutput renderDT formatStyle datatable styleEqual
 #' @importFrom utils write.csv
 matchmaker = function(dir = NULL, ...){
 
@@ -59,7 +59,7 @@ matchmaker = function(dir = NULL, ...){
                        uiOutput('mismatchcols'),
                        uiOutput('status'),
                        hr(),
-                       tableOutput('compare'),
+                       DTOutput('compare'),
                        hr(),
                        conditionalPanel("output.showButtons == 1",
                              fluidRow(
@@ -208,7 +208,7 @@ matchmaker = function(dir = NULL, ...){
     observeEvent(input$selection, index(input$selection))
 
     # # Comparison data
-    output$compare <- renderTable({
+    output$compare <- renderDT({
       req(index(), d1(), d2(),input$comparevars, pairs(), idcheck())
 
 
@@ -230,7 +230,16 @@ matchmaker = function(dir = NULL, ...){
 
       r[, c('order_cols') := NULL]
       r = rbind(r, data.table(variable = 'id', Person1 = p[[input$id1]], Person2 = p[[input$id2]]))
-    }, striped = T, bordered = T)
+      r[, equal := as.character(Person1 == Person2)]
+      r[is.na(equal), equal := 'MAYBE']
+
+      DT::datatable(r, options = list(pageLength = 25)) %>%
+        DT::formatStyle('equal', target = 'row',
+                    backgroundColor = DT::styleEqual(c('FALSE', "TRUE", 'MAYBE'), c('#beaed4','#7fc97f','#fdc086')))
+
+
+
+    })
 
 
     # A toggle to display buttons ----
