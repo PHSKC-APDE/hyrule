@@ -5,82 +5,82 @@
 #' @import shiny shinyFiles data.table
 #' @importFrom fs path_home
 #' @importFrom tools file_ext
-#' @importFrom DT DTOutput renderDT
+#' @importFrom DT DTOutput renderDT formatStyle datatable styleEqual
 #' @importFrom utils write.csv
 matchmaker = function(dir = NULL, ...){
 
   ui <- fluidPage(
 
-      # Application title
-      titlePanel("Find The Match!"),
+    # Application title
+    titlePanel("Find The Match!"),
 
-      # Sidebar
-      sidebarLayout(
-          sidebarPanel(
-            tags$h4('Load Data:'),
-            # Since this will be run locally, we just need the file path, not a copy of the file
-            shinyFiles::shinyFilesButton('loadPairs', 'Select Pairs File', 'Please select a file', FALSE),
-            tags$br(),
-            shinyFiles::shinyFilesButton('loadData1', 'Select Data1 File', 'Please select a file', FALSE),
-            tags$br(),
-            shinyFiles::shinyFilesButton('loadData2', 'Select Data2 File', 'Please select a file', FALSE),
-            tags$br(),
-            conditionalPanel('output.filesLoaded == 1',
-                            tags$h4('Navigation:'),
+    # Sidebar
+    sidebarLayout(
+      sidebarPanel(
+        tags$h4('Load Data:'),
+        # Since this will be run locally, we just need the file path, not a copy of the file
+        shinyFiles::shinyFilesButton('loadPairs', 'Select Pairs File', 'Please select a file', FALSE),
+        tags$br(),
+        shinyFiles::shinyFilesButton('loadData1', 'Select Data1 File', 'Please select a file', FALSE),
+        tags$br(),
+        shinyFiles::shinyFilesButton('loadData2', 'Select Data2 File', 'Please select a file', FALSE),
+        tags$br(),
+        conditionalPanel('output.filesLoaded == 1',
+                         tags$h4('Navigation:'),
 
-                            #Navigate to pairs
-                            uiOutput('selection'),
+                         #Navigate to pairs
+                         uiOutput('selection'),
 
-                            tags$h4('Select cols:'),
+                         tags$h4('Select cols:'),
 
-                            # drop down for ID 1
-                            uiOutput('id1'),
+                         # drop down for ID 1
+                         uiOutput('id1'),
 
-                            # drop down for ID 2
-                            uiOutput('id2'),
+                         # drop down for ID 2
+                         uiOutput('id2'),
 
-                            # Check box for variables to compare
-                            uiOutput('comparevars'),
+                         # Check box for variables to compare
+                         uiOutput('comparevars'),
 
-                            tags$h4('Save Results:'),
-                            # Save Results
-                            downloadButton("downloadMatches", "Save Results")
-              )
+                         tags$h4('Save Results:'),
+                         # Save Results
+                         downloadButton("downloadMatches", "Save Results")
+        )
 
 
+      ),
+
+      # Show a plot of the generated distribution
+      mainPanel(
+        tabsetPanel(
+          tabPanel('Make Matches',
+                   br(),
+                   conditionalPanel('output.filesLoaded == 0', tags$h4('To get started, you will need to load a pairs file as well as two data files')),
+                   uiOutput('mismatchcols'),
+                   uiOutput('status'),
+                   hr(),
+                   DTOutput('compare'),
+                   hr(),
+                   conditionalPanel("output.showButtons == 1",
+                                    fluidRow(
+                                      actionButton('previous', 'Previous'),
+                                      actionButton('nomatch', 'No Match!'),
+                                      actionButton('flag', 'Flag'),
+                                      actionButton('match', 'Match!'),
+                                      actionButton('nextone', 'Next')
+                                    ),
+                                    br(),
+                                    tableOutput('sum'),
+                                    br(),
+                                    tags$h4('Match breakdown'),
+                                    htmlOutput('filestatus')
+                   )
           ),
-
-          # Show a plot of the generated distribution
-          mainPanel(
-            tabsetPanel(
-              tabPanel('Make Matches',
-                       br(),
-                       conditionalPanel('output.filesLoaded == 0', tags$h4('To get started, you will need to load a pairs file as well as two data files')),
-                       uiOutput('mismatchcols'),
-                       uiOutput('status'),
-                       hr(),
-                       tableOutput('compare'),
-                       hr(),
-                       conditionalPanel("output.showButtons == 1",
-                             fluidRow(
-                               actionButton('previous', 'Previous'),
-                               actionButton('nomatch', 'No Match!'),
-                               actionButton('flag', 'Flag'),
-                               actionButton('match', 'Match!'),
-                               actionButton('nextone', 'Next')
-                             ),
-                             br(),
-                             tableOutput('sum'),
-                             br(),
-                             tags$h4('Match breakdown'),
-                             htmlOutput('filestatus')
-                           )
-                       ),
-              tabPanel('Review Results',
-                       DT::DTOutput('pair_view'))
-            )
-          )
+          tabPanel('Review Results',
+                   DT::DTOutput('pair_view'))
+        )
       )
+    )
   )
   server <- function(input, output) {
 
@@ -177,7 +177,7 @@ matchmaker = function(dir = NULL, ...){
         h5(fs[[1]]),
         h5(fs[[2]]),
         h5(fs[[3]])
-        )))
+      )))
 
 
 
@@ -191,7 +191,7 @@ matchmaker = function(dir = NULL, ...){
         idcheck(NULL)
         return(
           tags$strong('ID columns must also exist in `pairs` file')
-          )
+        )
       }else{
         idcheck(T)
         return(NULL)
@@ -208,7 +208,7 @@ matchmaker = function(dir = NULL, ...){
     observeEvent(input$selection, index(input$selection))
 
     # # Comparison data
-    output$compare <- renderTable({
+    output$compare <- renderDT({
       req(index(), d1(), d2(),input$comparevars, pairs(), idcheck())
 
 
@@ -230,7 +230,16 @@ matchmaker = function(dir = NULL, ...){
 
       r[, c('order_cols') := NULL]
       r = rbind(r, data.table(variable = 'id', Person1 = p[[input$id1]], Person2 = p[[input$id2]]))
-    }, striped = T, bordered = T)
+      r[, equal := as.character(Person1 == Person2)]
+      r[is.na(equal), equal := 'MAYBE']
+
+      DT::datatable(r, options = list(pageLength = 25)) %>%
+        DT::formatStyle('equal', target = 'row',
+                        backgroundColor = DT::styleEqual(c('FALSE', "TRUE", 'MAYBE'), c('#beaed4','#7fc97f','#fdc086')))
+
+
+
+    })
 
 
     # A toggle to display buttons ----
