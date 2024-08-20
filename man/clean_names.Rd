@@ -4,12 +4,12 @@
 \alias{clean_names}
 \title{Clean a vector of names}
 \usage{
-clean_names(x, type = "first")
+clean_names(x, bad_names = c())
 }
 \arguments{
 \item{x}{character vector}
 
-\item{type}{one of 'first' or last}
+\item{bad_names}{a character vector of names in X to turn to NA}
 }
 \description{
 Clean a vector of names
