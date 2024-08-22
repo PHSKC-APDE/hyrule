@@ -1,14 +1,12 @@
 #' Prepare a dataset for linkage
-#' @param d data.frame
+#' @param d a hyrule_data object
 #' @param first_name character. Identifies the column in `d` with the first name
+#' @param middle_name character identifying the column with middle name (or middle initial)
 #' @param last_name character. Identifies the column in `d` with the last name
 #' @param dob character. Identifies the column with date of birth
-#' @param middle_name character identifying the column with middle name (or middle initial)
-#' @param zip character. Default is NULL. Column that includes ZIP code data
 #' @param ssn character. column of social security number
-#' @param sex character. Column specifiyng sex/gender information.
 #' @param id character. Column containing a unique row level id
-#' @param name_heuristics logical. Indicates whether common name cleaning heuristics should be implemented
+#' @param pass_through character. Column names to include in the output object unaltered
 #' @export
 #' @importFrom data.table setDT tstrsplit year month mday setDF
 #' @importFrom stringr str_extract_all
@@ -17,37 +15,31 @@
 #'
 prep_data_for_linkage = function(d,
                                  first_name = NULL,
+                                 middle_name = NULL,
                                  last_name = NULL,
                                  dob = NULL,
-                                 middle_name = NULL,
-                                 zip = NULL,
                                  ssn = NULL,
                                  sex = NULL,
                                  id = NULL,
-                                 name_heuristics = TRUE){
-  stopifnot(inherits(d, 'data.frame'))
-  wasDT = is.data.table(d)
-  data.table::setDT(d)
+                                 pass_through = NULL){
+  stopifnot(inherits(d, 'hyrule_data'))
 
   # make sure all variables are within d
-  cols = list(first_name = first_name, last_name = last_name, dob = dob,
-              zip = zip, middle_name = middle_name, ssn = ssn, sex = sex, id = id)
+  cols = list(first_name = first_name, middle_name = middle_name, last_name = last_name, dob = dob, ssn = ssn, id = id)
   cols = unlist(cols)
-  mis = setdiff(cols, names(d))
+  mis = setdiff(c(cols, pass_through), colnames(d))
   if(length(mis)>0) stop(paste0('Missing the following columns: ', paste(mis, collapse =',')))
 
-  # Keep only the columns to be cleaned
-  d = d[, .SD, .SDcols = cols]
-  setnames(d, setdiff(cols, id), setdiff(names(cols), 'id'))
+  d = d |> dplyr::rename(all_of(cols))
 
   if('id' %in% names(cols)){
-    stopifnot(!anyDuplicated(d[[id]]))
+    id_dupechk = d |> dplyr::group_by(id) |> dplyr::filter(n()>1) |> nrow()
+    if(id_dupechk>0) stop('Dataset `d` has duplicate ids. Please make sure there is only one row per id.
+                          If you have variables with multiple entries per id, please use the `make_variable_history` function.')
   }
 
   # sex
   if('sex' %in% names(cols)){
-    d[, sex := toupper(substr(sex,1,1))]
-    stopifnot('`sex` column must be convertible to "M", "F", and/or "X"' = all(d[!is.na(sex), sex %in% c('M', 'F', 'X')]))
   }
 
   # First Name
