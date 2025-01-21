@@ -1,5 +1,8 @@
 #' A shiny app to facilitate the creation of a manual labelling of matches
 #' @param dir the directory to have the file selector start in
+#' @param p data.frame of pairs
+#' @param data1 data.frame of identifiers for pairs
+#' @param data2 data.frame of identifiers for pairs
 #' @param ... passed to shiny::shinyApp
 #' @export
 #' @import shiny shinyFiles data.table
@@ -7,7 +10,14 @@
 #' @importFrom tools file_ext
 #' @importFrom DT DTOutput renderDT formatStyle datatable styleEqual
 #' @importFrom utils write.csv
-matchmaker = function(dir = NULL, ...){
+matchmaker = function(dir = NULL, p = NULL, data1 = NULL, data2 = NULL, ...){
+
+  if(!is.null(p)){
+    p = as.data.table(p)
+    if(!'pair' %in% names(p)) p[, pair := NA_integer_]
+  }
+  if(!is.null(data1)) data1 = as.data.table(data1)
+  if(!is.null(data2)) data2 = as.data.table(data2)
 
   ui <- fluidPage(
 
@@ -101,8 +111,8 @@ matchmaker = function(dir = NULL, ...){
                  getVolumes()())
     # Pair handling ----
     shinyFiles::shinyFileChoose(input, 'loadPairs', roots = volumes, filetypes = c('csv', 'rds'))
-    pairs = reactiveVal()
-    pairf = reactiveVal()
+    pairs = reactiveVal(p)
+    pairf = reactiveVal(':memory:')
     observeEvent(input$loadPairs,{
       req(is.list(input$loadPairs))
       fp = parseFilePaths(volumes, input$loadPairs)
@@ -120,10 +130,10 @@ matchmaker = function(dir = NULL, ...){
     })
 
     # Data handling ----
-    d1 = reactiveVal()
-    d2 = reactiveVal()
-    d1f = reactiveVal()
-    d2f = reactiveVal()
+    d1 = reactiveVal(data1)
+    d2 = reactiveVal(data2)
+    d1f = reactiveVal(':memory:')
+    d2f = reactiveVal(':memory:')
     shinyFiles::shinyFileChoose(input, 'loadData1', roots = volumes, filetypes = c('csv', 'rds'))
     observeEvent(input$loadData1,{
       req(is.list(input$loadData1))
