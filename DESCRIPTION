@@ -1,7 +1,7 @@
 Package: hyrule
 Type: Package
 Title: Machine Learning Record Linkage 
-Version: 0.1.5
+Version: 0.2.
 Author: Daniel Casey
 Maintainer: Daniel Casey <data.request@kingcounty.gov>
 Description: MACHINES THAT LEARN HOW TO LINK PEOPLE
@@ -9,7 +9,7 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 Depends: 
-    R (>= 2.10)
+    R (>= 3.5)
 RoxygenNote: 7.3.2
 Imports: 
     data.table,

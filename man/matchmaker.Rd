@@ -4,10 +4,16 @@
 \alias{matchmaker}
 \title{A shiny app to facilitate the creation of a manual labelling of matches}
 \usage{
-matchmaker(dir = NULL, ...)
+matchmaker(dir = NULL, p = NULL, data1 = NULL, data2 = NULL, ...)
 }
 \arguments{
 \item{dir}{the directory to have the file selector start in}
+
+\item{p}{data.frame of pairs}
+
+\item{data1}{data.frame of identifiers for pairs}
+
+\item{data2}{data.frame of identifiers for pairs}
 
 \item{...}{passed to shiny::shinyApp}
 }
