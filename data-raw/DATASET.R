@@ -50,8 +50,17 @@ uniq_locs[zipna, zip_code := NA]
 uno = merge(uno, uniq_locs, all.x = T, by = c('street_number', 'street_name'))
 dos = merge(dos, uniq_locs, all.x = T, by = c('street_number', 'street_name'))
 
+uno[, id := NULL]
+dos[, id := NULL]
+
+setnames(uno, 'simulant_id', 'source_id')
+setnames(dos, 'simulant_id', 'source_id')
+
+
 fake_one = uno
+fake_one[, source_system := 'System 1']
 fake_two = dos
+fake_two[, source_system := 'System 2']
 
 # # clean up names and stuff
 # setnames(fake_one, 'simulant_id', 'id1')
@@ -76,6 +85,7 @@ train = rbind(
 #Randomly permute a few
 permute_me = sample(seq_len(train[,.N]), 20)
 train[permute_me, pair := sample(0:1, .N, T)]
+
 usethis::use_data(train, overwrite = TRUE)
 arrow::write_parquet(train, 'data-raw/train.parquet')
 
