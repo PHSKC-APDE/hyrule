@@ -14,8 +14,6 @@
 #' Additionally, this function will likely need to be changed which each dataset/linkage due to different columns
 #' and/or different linkage goals.
 #'
-#' @param input file.path to a parquet file OR a function that returns a data.frame type object
-#' @param output_file file.path for a parquet file
 init_data = function(input, output_file = NULL, ...){
 
   # Load data ----
@@ -54,7 +52,7 @@ init_data = function(input, output_file = NULL, ...){
   ## of names and seeing which appear most often.
 
   ## clean date of birth ----
-  ids[, dob_clean := as.Date(date_of_birth, tryFormats = c('%Y-%m-%d', '%m/%d/%Y'))]
+  ids[, dob_clean := as.Date(date_of_birth, format = '%m/%d/%Y')]
   ids[year(dob_clean) > data.table::year(Sys.Date()) | year(dob_clean) < 1901, `:=` (dob_clean = NA)]
 
   ## clean gender/sex ----

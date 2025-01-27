@@ -1,19 +1,56 @@
 ---
-title: "Target Markdown"
-output: html_document
+title: "ML Record Linkage"
+output: 
+  html_document:
+    toc: true
 ---
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
+# Overview
+
+## About this document
+
+This document is an example implementation of machine learning record linkage within a [targets workflow](https://books.ropensci.org/targets/). While it is designed to be a runnable pipeline, the primary goal of this example is to provide ideas and show options that analysts can adapt to their own projects.
+
+The funding and inspiration for this document derives from the NO HARMS grant conducted at Public Health - Seattle & King County and funded by the CDC. The pipeline and methods described below are heavily influenced by the NO HARMS pipeline, but are intended to be more generalized and flexible.
+
+### Useful Concepts
+
+Users should familiarize themselves with the following R-packages and/or methodological concepts:
+
+1.  `targets` and `tarchetypes`: These R-packages are used to orchestrate the linkage pipeline.
+2.  `data.table`, `duckdb` (R-package, overall reference): Most of the data manipulation within this pipeline is either conducted via the `data.table` R-package or `duckdb` dialect sql (via the `DBI`) package. The `glue` package is often used to craft sql statements.
+3.  `.parquet` files: The `arrow` package (along with `duckdb`) provides read/write routines for `.parquet` files. `.parquet` files are used because they are reasonably efficient storage wise and allow for partial read/writes. `DuckDB` in particular has effective routines for reading/manipulating `.parquet` files.
+4.  `tidymodels`: This example (and the `hyrule` package) relies on the `tidymodels` suite of packages for model specification, fitting, and evaluation. The main packages used are `parnsip`, `workflows`, `tune`, `stacks`, and `yardstick`.
+5.  *machine learning*: This example uses `xgboost` gradient boosted machines, `ranger` random forests, and `kernlab` support vector machines.
+6.  *stacking*: This method uses stacked generalization (aka stacking) for model ensembling. The `stacks` package provides the implementation.
+7.  `igraph`: A package for working with networks/graphs.
+8.  *string distance metrics*: Many of the character variable based comparisons (e.g. name similarity) are string distance metrics. More details can be found here. Implementation is done via `DuckDB` routines.
+
+### Code Location
+
+### Glossary
+
+1.  Source id
+2.  hash id
+3.  
+
+# Workflow Summary
+
 # Load Packages
+
 ## Pipeline setup packages
+
 These packages are required to set up the pipeline
 
 ```{r}
 library(targets)
 library('hyrule')
+library(tarchetypes)
+library(glue)
 ```
 
 Remove the `_targets_r` directory previously written by non-interactive runs of the report.
@@ -23,66 +60,122 @@ tar_unscript()
 ```
 
 ## Pipeline packages and functions
+
 These packages and functions are required to run the pipeline (and not just set it up).
 
 ```{targets define-globals, tar_globals = TRUE}
 tar_option_set(
-  packages = c('data.table', 'hyrule', 'stringr', 'arrow')
+  packages = c('data.table', 'hyrule', 'stringr', 'arrow', 'duckdb', 'DBI')
 )
 
 # Much of the code/functions to make the pipeline run are stored in example_workflow/R
 tar_source()
 
+# Specify input and output directories
+outdir = 'output/'
+
 ```
 
 # Targets
 
-Our first target borrows the `airquality` dataset built into base R.
+## Prepare Data
 
-```{targets raw-data}
-tar_target(raw_data, airquality)
-```
+### Main Identifiers
 
-Our next targets preprocess the data, make a histogram, and fit a model.
+This section loads, cleans, organizes, and stores data inputs. These inputs include things like ZIP centrists, and nickname lists. Derivative products, like name frequencies should also be computed at this step.
 
-```{targets downstream-targets}
+There are two main approaches to record linkage as handled by this template/example:
+
+1.  Link only: Two data sets are assumed to have no duplicates
+2.  De-duplicate (and link): One or more datasets are appended together and within and between dataset linkages are computed. If only one dataset is provided then the operation is purely de-duplication
+
+This example is primarily focused on option 1, although some code for #2 is provided where relevant (commented out)
+
+The initial load and clean step is primarily for primary identifiers (e.g. name, dob, or ssn). Secondary identifiers (e.g. location) can also be cleaned during this step (e.g. in the `init_data.R`
+
+```{targets load-data}
 list(
-  tar_target(data, raw_data %>% filter(!is.na(Ozone))),
-  tar_target(hist, create_plot(data))
+  # file paths to data
+  tarchetypes::tar_files_input(input_1, '../data-raw/fake_one.parquet'),
+  tarchetypes::tar_files_input(input_2, '../data-raw/fake_two.parquet'),
+  
+  # Load, clean, and save datasets
+  tar_target(data_1, init_data(input_1, file.path(outdir, 'd1.parquet')), format = 'file'),
+  
+  # Specify second dataset for link only example
+  tar_target(data_2, init_data(input_2, file.path(outdir, 'd2.parquet')), format = 'file'),
+
+  # if this is a linkdedupe situation, you'd probably want to do the following instead of : 
+  # tar_target(data_2, data_1, format = 'file)
+  
+  # Create frequency tables
+  tar_target(freqs, create_frequency_table(tables = list(data_1, data_2),
+                                           columns = c('first_name_noblank', 'last_name_noblank', 'dob_clean'), 
+                                           output_folder = outdir))
+
 )
 ```
 
-Set the `tar_simple` chunk option to `TRUE` to define a single target with the command in the code chunk. The chunk below only contains `biglm(Ozone ~ Wind + Temp, data)` in the source, but because `tar_simple` is `TRUE`, it is shorthand for `tar_target(name = fit, command = biglm(Ozone ~ Wind + Temp, data))`. All other arguments to `tar_target()` are set to their default values (configurable with `tar_option_set()`).
+### Secondary identifiers
 
-```{targets fit, tar_simple = TRUE}
-biglm(Ozone ~ Wind + Temp, data)
+When secondary identifiers (ones that are not part of the id hash, for example, address or zip code) have multiple entries per source id (e.g. over time), analyzing them as histories/lists may be more effective. For example, given the address histories for two records, variables that flag whether the histories overlapped at the same geographic (and temporal) location is useful for predicting whether they represent the same entity.
+
+Note: The sample data used in this document only has one (or zero) addresses associated with each source id. However, the "history" approach to data transformation and analysis is used for demonstration purposes. The code (or at least the method) is scalable to longer histories and a one entry history is legitimate in any case.
+
+```{targets load-histories}
+
 ```
 
-# Pipeline
+### Musings on how to clean data
 
-If you ran all the `{targets}` chunks in non-interactive mode, then your R scripts are set up to run the pipeline.
+## Training data
 
-```{r}
-tar_make()
-```
+### Creating new training data
 
-# Output
+### Specifying a formula
 
-You can retrieve results from the `_targets/` data store using `tar_read()` or `tar_load()`.
+### Making a model frame
 
-```{r, message = FALSE}
-library(biglm)
-tar_read(fit)
-```
+### Test/train split
 
-```{r}
-tar_read(hist)
-```
+## Blocking
 
-The `targets` dependency graph helps your readers understand the steps of your pipeline at a high level.
+### Specifying blocking rules with SQL
 
-```{r}
-tar_visnetwork()
-```
+### Computing and compiling pairs for evaluation
 
-At this point, you can go back and run `{targets}` chunks in interactive mode without interfering with the code or data of the non-interactive pipeline.
+## Model specification
+
+### Screening model
+
+### Submodels
+
+### Stacked ensemble model
+
+## Predicting matchiness
+
+### Using the ensemble
+
+### Fixed links
+
+## Evaluation and cutoffs
+
+### OOS validation
+
+### Identifying the cutpoint
+
+## From 1:1 links to networks
+
+### Aggregating from hash ids to source ids
+
+### Applying constraints
+
+E.g. only one death per network
+
+### Create identity table
+
+## Odds and ends
+
+### How to boostrap a new model
+
+### Opportunities for future improvement
