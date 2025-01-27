@@ -40,9 +40,9 @@ Users should familiarize themselves with the following R-packages and/or methodo
 
 # Workflow Summary
 
-# Load Packages
+# Set up
 
-## Pipeline setup packages
+## Pipeline setup
 
 These packages are required to set up the pipeline
 
@@ -59,7 +59,7 @@ Remove the `_targets_r` directory previously written by non-interactive runs of 
 tar_unscript()
 ```
 
-## Pipeline packages and functions
+## Packages and functions
 
 These packages and functions are required to run the pipeline (and not just set it up).
 
@@ -76,7 +76,7 @@ outdir = 'output/'
 
 ```
 
-# Targets
+# ML Record Linkage Pipeline
 
 ## Prepare Data
 
@@ -128,6 +128,10 @@ Note: The sample data used in this document only has one (or zero) addresses ass
 
 ### Musings on how to clean data
 
+[Reproduce the list I sent Abie a while ago]
+
+[John Doe]
+
 ## Training data
 
 ### Creating new training data
@@ -174,8 +178,22 @@ E.g. only one death per network
 
 ### Create identity table
 
-## Odds and ends
+## Did is work?
 
-### How to boostrap a new model
+### Assessing the evaluation metrics
 
-### Opportunities for future improvement
+### Manual evaluation hueristics
+
+#### Large low density clusters
+
+#### Twins
+
+#### Multiple people within a source id
+
+# Odds and ends
+
+## Porting an old model into new data
+
+## Iterative development principles
+
+## Opportunities for future improvement

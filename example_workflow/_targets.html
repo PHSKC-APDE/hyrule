@@ -368,13 +368,13 @@ Location</a></li>
 </ul></li>
 <li><a href="#workflow-summary" id="toc-workflow-summary">Workflow
 Summary</a></li>
-<li><a href="#load-packages" id="toc-load-packages">Load Packages</a>
+<li><a href="#set-up" id="toc-set-up">Set up</a>
 <ul>
-<li><a href="#pipeline-setup-packages" id="toc-pipeline-setup-packages">Pipeline setup packages</a></li>
-<li><a href="#pipeline-packages-and-functions" id="toc-pipeline-packages-and-functions">Pipeline packages and
-functions</a></li>
+<li><a href="#pipeline-setup" id="toc-pipeline-setup">Pipeline
+setup</a></li>
+<li><a href="#packages-and-functions" id="toc-packages-and-functions">Packages and functions</a></li>
 </ul></li>
-<li><a href="#targets" id="toc-targets">Targets</a>
+<li><a href="#ml-record-linkage-pipeline" id="toc-ml-record-linkage-pipeline">ML Record Linkage Pipeline</a>
 <ul>
 <li><a href="#prepare-data" id="toc-prepare-data">Prepare Data</a>
 <ul>
@@ -427,13 +427,22 @@ ids to source ids</a></li>
 <li><a href="#applying-constraints" id="toc-applying-constraints">Applying constraints</a></li>
 <li><a href="#create-identity-table" id="toc-create-identity-table">Create identity table</a></li>
 </ul></li>
+<li><a href="#did-is-work" id="toc-did-is-work">Did is work?</a>
+<ul>
+<li><a href="#assessing-the-evaluation-metrics" id="toc-assessing-the-evaluation-metrics">Assessing the evaluation
+metrics</a></li>
+<li><a href="#manual-evaluation-hueristics" id="toc-manual-evaluation-hueristics">Manual evaluation
+hueristics</a></li>
+</ul></li>
+</ul></li>
 <li><a href="#odds-and-ends" id="toc-odds-and-ends">Odds and ends</a>
 <ul>
-<li><a href="#how-to-boostrap-a-new-model" id="toc-how-to-boostrap-a-new-model">How to boostrap a new
-model</a></li>
+<li><a href="#porting-an-old-model-into-new-data" id="toc-porting-an-old-model-into-new-data">Porting an old model into
+new data</a></li>
+<li><a href="#iterative-development-principles" id="toc-iterative-development-principles">Iterative development
+principles</a></li>
 <li><a href="#opportunities-for-future-improvement" id="toc-opportunities-for-future-improvement">Opportunities for future
 improvement</a></li>
-</ul></li>
 </ul></li>
 </ul>
 </div>
@@ -505,10 +514,10 @@ More details can be found here. Implementation is done via
 <div id="workflow-summary" class="section level1">
 <h1>Workflow Summary</h1>
 </div>
-<div id="load-packages" class="section level1">
-<h1>Load Packages</h1>
-<div id="pipeline-setup-packages" class="section level2">
-<h2>Pipeline setup packages</h2>
+<div id="set-up" class="section level1">
+<h1>Set up</h1>
+<div id="pipeline-setup" class="section level2">
+<h2>Pipeline setup</h2>
 <p>These packages are required to set up the pipeline</p>
 <pre class="r"><code>library(targets)
 library(&#39;hyrule&#39;)
@@ -518,8 +527,8 @@ library(glue)</code></pre>
 non-interactive runs of the report.</p>
 <pre class="r"><code>tar_unscript()</code></pre>
 </div>
-<div id="pipeline-packages-and-functions" class="section level2">
-<h2>Pipeline packages and functions</h2>
+<div id="packages-and-functions" class="section level2">
+<h2>Packages and functions</h2>
 <p>These packages and functions are required to run the pipeline (and
 not just set it up).</p>
 <pre class="r"><code>tar_option_set(
@@ -535,8 +544,8 @@ outdir = &#39;output/&#39;
 #&gt; Establish _targets.R and _targets_r/globals/define-globals.R.</code></pre>
 </div>
 </div>
-<div id="targets" class="section level1">
-<h1>Targets</h1>
+<div id="ml-record-linkage-pipeline" class="section level1">
+<h1>ML Record Linkage Pipeline</h1>
 <div id="prepare-data" class="section level2">
 <h2>Prepare Data</h2>
 <div id="main-identifiers" class="section level3">
@@ -599,6 +608,8 @@ histories and a one entry history is legitimate in any case.</p>
 </div>
 <div id="musings-on-how-to-clean-data" class="section level3">
 <h3>Musings on how to clean data</h3>
+<p>[Reproduce the list I sent Abie a while ago]</p>
+<p>[John Doe]</p>
 </div>
 </div>
 <div id="training-data" class="section level2">
@@ -668,14 +679,35 @@ histories and a one entry history is legitimate in any case.</p>
 <h3>Create identity table</h3>
 </div>
 </div>
-<div id="odds-and-ends" class="section level2">
-<h2>Odds and ends</h2>
-<div id="how-to-boostrap-a-new-model" class="section level3">
-<h3>How to boostrap a new model</h3>
+<div id="did-is-work" class="section level2">
+<h2>Did is work?</h2>
+<div id="assessing-the-evaluation-metrics" class="section level3">
+<h3>Assessing the evaluation metrics</h3>
 </div>
-<div id="opportunities-for-future-improvement" class="section level3">
-<h3>Opportunities for future improvement</h3>
+<div id="manual-evaluation-hueristics" class="section level3">
+<h3>Manual evaluation hueristics</h3>
+<div id="large-low-density-clusters" class="section level4">
+<h4>Large low density clusters</h4>
 </div>
+<div id="twins" class="section level4">
+<h4>Twins</h4>
+</div>
+<div id="multiple-people-within-a-source-id" class="section level4">
+<h4>Multiple people within a source id</h4>
+</div>
+</div>
+</div>
+</div>
+<div id="odds-and-ends" class="section level1">
+<h1>Odds and ends</h1>
+<div id="porting-an-old-model-into-new-data" class="section level2">
+<h2>Porting an old model into new data</h2>
+</div>
+<div id="iterative-development-principles" class="section level2">
+<h2>Iterative development principles</h2>
+</div>
+<div id="opportunities-for-future-improvement" class="section level2">
+<h2>Opportunities for future improvement</h2>
 </div>
 </div>
 
