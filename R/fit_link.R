@@ -54,7 +54,7 @@ fit_link = function(train, formula, ensemble = default_ensemble(), bounds = c(.0
                 grid = penalty_grid,
                 control = tune::control_grid(verbose = F, save_pred = T),
                 metrics = yardstick::metric_set(yardstick::mn_log_loss)) %>%
-      tune::select_best()
+      tune::select_best(metric = 'mn_log_loss')
 
 
     screen = parsnip::logistic_reg(engine = 'glmnet', mixture = 1, penalty = best_pen$penalty) %>%

@@ -21,7 +21,7 @@ The funding and inspiration for this document derives from the NO HARMS grant co
 
 Users should familiarize themselves with the following R-packages and/or methodological concepts:
 
-1.  `targets` and `tarchetypes`: These R-packages are used to orchestrate the linkage pipeline.
+1.  `targets` and `tarchetypes`: These R-packages are used to orchestrate the linkage pipeline. A targets pipeline is a structured way of specifying a directed acyclic graph that governs how inputs, intermediate steps, and outputs all interact/flow into each other. The pipeline can identify changes in the code and inputs for a particular step and propagate the need to update to downstream steps. Via some partner packages (e.g. `crew`), a targets pipeline can be computed in parallel fairly easily as the full dependency chain is pre-specified.
 2.  `data.table`, `duckdb` (R-package, overall reference): Most of the data manipulation within this pipeline is either conducted via the `data.table` R-package or `duckdb` dialect sql (via the `DBI`) package. The `glue` package is often used to craft sql statements.
 3.  `.parquet` files: The `arrow` package (along with `duckdb`) provides read/write routines for `.parquet` files. `.parquet` files are used because they are reasonably efficient storage wise and allow for partial read/writes. `DuckDB` in particular has effective routines for reading/manipulating `.parquet` files.
 4.  `tidymodels`: This example (and the `hyrule` package) relies on the `tidymodels` suite of packages for model specification, fitting, and evaluation. The main packages used are `parnsip`, `workflows`, `tune`, `stacks`, and `yardstick`.
@@ -30,11 +30,13 @@ Users should familiarize themselves with the following R-packages and/or methodo
 7.  `igraph`: A package for working with networks/graphs.
 8.  *string distance metrics*: Many of the character variable based comparisons (e.g. name similarity) are string distance metrics. More details can be found here. Implementation is done via `DuckDB` routines.
 
+### Machines vs. probabilistic methods
+
 ### Code Location
 
 ### Glossary
 
-1.  Source id
+1.  Source id and source system
 2.  hash id
 3.  
 
@@ -51,6 +53,8 @@ library(targets)
 library('hyrule')
 library(tarchetypes)
 library(glue)
+library('sf')
+library('data.table')
 ```
 
 Remove the `_targets_r` directory previously written by non-interactive runs of the report.
@@ -65,7 +69,7 @@ These packages and functions are required to run the pipeline (and not just set 
 
 ```{targets define-globals, tar_globals = TRUE}
 tar_option_set(
-  packages = c('data.table', 'hyrule', 'stringr', 'arrow', 'duckdb', 'DBI')
+  packages = c('data.table', 'hyrule', 'stringr', 'arrow', 'duckdb', 'DBI', 'glue', 'stringr', 'sf', 'tidymodels', 'workflows', 'stacks', 'dplyr', 'ranger', 'xgboost', 'rlang', 'igraph')
 )
 
 # Much of the code/functions to make the pipeline run are stored in example_workflow/R
@@ -74,103 +78,514 @@ tar_source()
 # Specify input and output directories
 outdir = 'output/'
 
+# other global variables
+apply_screen = TRUE
+bounds = c(.01, .99)
+
 ```
 
 # ML Record Linkage Pipeline
 
 ## Prepare Data
 
-### Main Identifiers
+This section loads, cleans, organizes, and stores data inputs.
 
-This section loads, cleans, organizes, and stores data inputs. These inputs include things like ZIP centrists, and nickname lists. Derivative products, like name frequencies should also be computed at this step.
+There are two main approaches to record linkage:
 
-There are two main approaches to record linkage as handled by this template/example:
+1.  Link only: Data sets are assumed to have no duplicates, and therefore within dataset linkages are computed. This is specified during the blocking step, and in this example, largely depends on a `source_system` variable.
+2.  De-duplicate (and link): One or more datasets are appended together and within and between dataset linkages are computed.
 
-1.  Link only: Two data sets are assumed to have no duplicates
-2.  De-duplicate (and link): One or more datasets are appended together and within and between dataset linkages are computed. If only one dataset is provided then the operation is purely de-duplication
+### An aside on types of identifiers
 
-This example is primarily focused on option 1, although some code for #2 is provided where relevant (commented out)
+For this workflow, identifiers and other variables come in a few main flavors:
 
-The initial load and clean step is primarily for primary identifiers (e.g. name, dob, or ssn). Secondary identifiers (e.g. location) can also be cleaned during this step (e.g. in the `init_data.R`
+1.  Primary identifiers are things like source system, source id, name, date of birth, social security, and sex/gender. These variables generally do not vary over time – or at least, if they do, it happens only sporadically. These identifiers (or some similar subset) represent the core of a record and are often the basis for blocking criteria.
+2.  Secondary identifiers are things like address, ZIP code, and phone number. These are things that may change with regularity and where the temporal characteristics of their appearance may be informative.
+3.  Contextual variables are all other things that may be used for determining whether record A represents the same entity as record B. Some examples may include: household size, term frequency adjustment, possibility of being a twin, etc.
 
-```{targets load-data}
+### Primary Identifiers
+
+In the code below, the `tarchetypes::tar_files_input` ingests the file path of the supplied data files and makes a checkpoint on the file – beginning the dependency chain
+
+The `init_data` function loads the data passed via the `input` argument and uses some hyrule functions to do common cleaning routines (in a somewhat opinionated manner). In this case, the two input datasets (`input_1` and `input_2`) are appended together (via `arrow::read_parquet` within the `init_data` function) and processed at the same time because the rest of the process assumes one "data" file/table with a `source_system` column that differentiates between the data specified by `input_1` versus `input_2`.
+
+```{targets primary-identifiers}
 list(
   # file paths to data
   tarchetypes::tar_files_input(input_1, '../data-raw/fake_one.parquet'),
   tarchetypes::tar_files_input(input_2, '../data-raw/fake_two.parquet'),
   
   # Load, clean, and save datasets
-  tar_target(data_1, init_data(input_1, file.path(outdir, 'd1.parquet')), format = 'file'),
-  
-  # Specify second dataset for link only example
-  tar_target(data_2, init_data(input_2, file.path(outdir, 'd2.parquet')), format = 'file'),
+  tar_target(data, init_data(c(input_1, input_2), file.path(outdir, 'data.parquet')), format = 'file')
 
-  # if this is a linkdedupe situation, you'd probably want to do the following instead of : 
-  # tar_target(data_2, data_1, format = 'file)
-  
-  # Create frequency tables
-  tar_target(freqs, create_frequency_table(tables = list(data_1, data_2),
-                                           columns = c('first_name_noblank', 'last_name_noblank', 'dob_clean'), 
-                                           output_folder = outdir))
 
 )
 ```
 
+Within the `init_data` function, the following steps occur:
+
+1.  Via `hyrule::clean_names`, name columns are stripped of non-character values and common prefixes/suffixes are removed. `hyrule::remove_spaces` then removes any white space characters.
+2.  Date of birth is converted into a date format and restricted to be from 1901 to the current year.
+3.  Sex is converted into a standard character column ( e.g. 'Male' and 'Female' is converted to 'M' and 'F'). Anything not in those two categories is set to NA.
+4.  Some SSN cleaning code is available as comments. This code, if applied, converts SSNs to strings of only numerics, removes common junk SSNs, and converts things to a standardized 9 digit number (as a character column to allow for SSNs beginning with 0).
+5.  Rows with too much missing information are dropped from the dataset
+6.  Rows with partial data density are filled in using data from other rows within the same source id. For example, if rows 1, 2 and 3 all derive from the same source id, and rows 2 and 3 have the same middle initial value but row 1 is NA, that NA is overwritten by the value present in rows 2 and 3. In the event that 2 and 3 disagree, then row 1 remains blank for that variable.
+
+While these steps are good starting points for any linkage project, they should not be considered immutable or complete. Each project will likely require its own data cleaning routines as data can be messy in nearly infinite ways.
+
+#### Row hashes
+
+The final main step fo the `init_data` function is the creation of a row-wise hash is generated based off the cleaned primary identifiers – in this case, source system, source id, name, dob, and sex. This hash will subsequently be used as the main unique row identifier and it is used to nest variations of primary variables within a given source system and source id combination.
+
+Practically, using the hash (instead of source id) as the low-level identifier instead of source id allows for more data available by source id to be leveraged to improve the linkage process. For example, if source ID sometimes has Richard as the first name and sometimes as Rick, then both permutations can be used for blocking and evaluating possible links to identify more matches.
+
+Handling the data in this way (row based) instead of aggregating thing into list-columns and using set operations also improves computational efficiency – especially for blocking.
+
 ### Secondary identifiers
 
-When secondary identifiers (ones that are not part of the id hash, for example, address or zip code) have multiple entries per source id (e.g. over time), analyzing them as histories/lists may be more effective. For example, given the address histories for two records, variables that flag whether the histories overlapped at the same geographic (and temporal) location is useful for predicting whether they represent the same entity.
+Secondary identifiers are primarily variables not included within the id hash and/or ones that will not be used for blocking. These variables are also more likely to change over time and/or have higher levels of missingness. Common examples include addresses and ZIP code. Unlike the primary identifiers, these data are treated as list columns/sets/histories (e.g. does the address history for record A overlap with that of record B) and are kept at the source id level (at least in this document).
 
 Note: The sample data used in this document only has one (or zero) addresses associated with each source id. However, the "history" approach to data transformation and analysis is used for demonstration purposes. The code (or at least the method) is scalable to longer histories and a one entry history is legitimate in any case.
 
-```{targets load-histories}
-
+```{targets 2nd-vars}
+list(
+  # Prepare the location histories
+  tar_target(
+    lh,
+    create_location_history(
+      input = c(input_1, input_2),
+      # This changes based on data storage/format
+      output_file = file.path(outdir, 'lh.parquet'),
+      id_cols = c('source_system', 'source_id'),
+      X = 'X',
+      Y = 'Y'
+    ),
+    format = 'file'
+  ),
+  
+  # Prepare ZIP code histories
+  tar_target(
+    zh,
+    create_history_variable(
+    input = c(input_1,input_2),
+    output_file = file.path(outdir, 'zh.parquet'),
+    id_cols = c('source_system', 'source_id'),
+    variable = 'zip_code',
+    clean_function = clean_zip_code
+    ),
+    format = 'file'
+  )
+)
 ```
 
-### Musings on how to clean data
+### Contextual variables
 
-[Reproduce the list I sent Abie a while ago]
+```{targets context-variables}
+list(
+  # Create frequency tables
+  tar_target(
+    freqs,
+    create_frequency_table(
+      tables = list(data),
+      columns = c('first_name_noblank', 'last_name_noblank', 'dob_clean'),
+      output_folder = outdir
+    ), format = 'file'
+  )
+)
+```
 
-[John Doe]
+### Other data cleaning ideas
+
+1.  In real data, there are common "junk" names – e.g. John Doe. These should be removed
 
 ## Training data
 
-### Creating new training data
+### Creating (new) training data
+
+Unlike probabilistic methods (e.g. splink), machine learning methods require training data to operate. When beginning a new project, a few options are available:
+
+1.  Borrow from a previously fit ML model
+2.  Borrow from a probabilistic model
+3.  Use some deterministic rules
+4.  Randomly sampled pairs, if you are mad
+
+### Prepping training data for this workflow
+
+The `pairs` dataset within hyrule is at the source id rather than the hash level. This next target/block of code converts from source id to hash id. Generally, this step will not be required as the training data will be natively at the hash level. Additionally, most users will have their training pairs stored in a database and/or as a set of loadable files (e.g. csv) that can be read in with `tarchetypes::tar_files_input`.
+
+```{targets prep-traindat}
+list(
+  # Note: This step is mostly just so the example(s) can run
+  tar_target(train_input,
+             convert_sid_to_hid(
+               pairs = hyrule::train, 
+               arrow::read_parquet(data),
+               output_file = file.path(outdir, 'training.parquet')
+               ), format = 'file'
+             )
+  
+  # usually something like the following is better
+  #tarchetypes::tar_files_input(train_input,'FILEPATHS to training data goes here'))
+)
+
+
+
+```
 
 ### Specifying a formula
 
-### Making a model frame
+Like most modelling/regression/machine learning exercises, a formula must be specified. Something like `pair ~ varA + varB + varC` where `pair` refers to the column in the training data indicating whether two records are a match and `varA`, `varB`, and `varC` are variables that are likely predictive of the match-iness between two records. For this exercise, the following variables are of interest (and will be computed – see below):
+
+1.  `dob_year_exact`: exact match of year of birth
+2.  `dob_mdham`: hamming distance between month and day of birth
+3.  `gender_agree`: gender explicitly matches
+4.  `first_name_jw`: jaro-winkler distance of first names
+5.  `last_name_jw`: jaro-winkler distance of last names
+6.  `name_swap_jw`: jaro-winkler distance of names with first and last swapped
+7.  `complete_name_dl`: daimaru-levenstein distance between the full names. Full name is either first + last or first + middle + last. The minimum distance of the two versions is used.
+8.  `middle_initial_agree`: Explicit match of middle initial
+9.  `last_in_last`: where either records' whole last name is contained in the other one
+10. `first_name_freq`: Scaled frequency tabulation of first names
+11. `last_name_freq`: Scaled frequency tabulation of last names
+12. `zip_overlap`: Binary flag indicating zip code histories ever overlapped (not accounting for time)
+13. `exact_location`: binary flag indicating address histories overlap within 3 meters (location only – not spatio-temporal).
+
+```{targets formula, tar_globals = TRUE}
+f = pair ~ dob_year_exact + dob_mdham + gender_agree +
+  first_name_jw + last_name_jw + name_swap_jw +
+  complete_name_dl + middle_initial_agree + last_in_last +
+  first_name_freq + last_name_freq +
+  zip_overlap + exact_location
+  
+
+```
+
+### Creating the variables
+
+To create the variables specified by the formula, this workflow uses a function called `make_model_frame`. `make_model_frame` takes a number of inputs (datasets, the training pairs, frequency tables, etc.) and computes the required columns from the data. The actual computation is handled in a temporary DuckDB database so that expressive (and relatively portable) sql can be used. DuckDB is also quite clever when working with parquet files and optimizing queries.
+
+### Compile training data
+
+#### Load and prepare training data
+
+At this stage, the `train_input` step is a basic data.frame (technically a file path to a data.frame) with three columns: `id1`, `id2`, and `pair`. The first two columns specify pairs of records while the `pair` column is a binary flag indicating whether the two (hash) ids are a match (1) or not (0). To be usable for model fitting, the training pairs must be screened for duplicates, contradictions (e.g. the first wave of training data says A !=B while the second set says A = B) must be reconciled, and the ids must be checked for validity (e.g. the input data might have changed the hash for a particular row so that a given pair in the training data doesn't have a counterpart in the main data).
+
+#### Computing prediction variables
+
+Once the training pairs are prepared, the predictor variables must be created. In this workflow, the `make_model_frame` function is used to do this (usually nested within another function). This function takes in a few parquet file paths (and/or table specified by `DBI::Id()`) and generates a sql query that when executed in the the correct environment will return a data frame containing pair level variables.
+
+For preparing the training data, `compile_training_data` loads and standardizes labeled pairs, uses `make_model_frame` (with the previously created targets as inputs) to go from labeled pairs to "training data." Before saving the results, some sanity checks are performed to ensure that too many of the labeled pairs get dropped due to missing data or some other set of data gremlins.
+
+```{targets training-data}
+
+list(
+  tar_target(
+    train_test_data, 
+    compile_training_data(
+        input = train_input,
+        output_file = file.path(outdir, 'train_and_test.parquet'),
+        formula = f,
+        data = data,
+        loc_history = lh,
+        zip_history = zh,
+        freq_tab_first_name = freqs[1],
+        freq_tab_last_name = freqs[2],
+        freq_tab_dob = freqs[3]
+      )
+    )
+  )
+
+```
 
 ### Test/train split
 
-## Blocking
+The labeled data is split into two chunks datasets "train" and "test." The training dataset will inform the models that will be fit on the later sections while the "test" dataset is held out and will be used to generate out of sample fit metrics.
 
-### Specifying blocking rules with SQL
-
-### Computing and compiling pairs for evaluation
+```{targets split-test-train}
+list(
+  tar_target(
+    training_hash,
+    rlang::hash(arrow::read_parquet(train_test_data))
+  ),
+  
+  tar_target(test_train_split, 
+             split_tt(hash = training_hash, 
+                      training_data = train_test_data, 
+                      fraction = .15, 
+                      train_of = file.path(outdir, 'train.parquet'), 
+                      test_of = file.path(outdir, 'test.parquet'))
+             , format = 'file')
+  
+)
+```
 
 ## Model specification
 
+The linkage model consists of three parts:
+
+1.  A lasso logistic regression that quickly screens out "obvious" matches and non-matches
+2.  A diverse series of models that are fit via cross-validation.
+3.  An ensemble model fit on the cross-validated results of the models generated in step 2 that makes the final match score.
+
+Step 1 is used for computation efficiency as logistic regressions produce match scores quickly and are good enough to produce ballpark estimates. Together, steps 2 and 3 are a "stacking" ensemble model approach where a diverse set of models are combined together to produce results that are better than a single model.
+
 ### Screening model
+
+```{targets screener}
+list(
+  tar_target(screener, 
+  command = fit_screening_model(test_train_split[2], bounds, f))
+)
+```
 
 ### Submodels
 
+For an effective ensemble, a variety of model families are employed. This example uses tuned versions of support vector machines, random forests, and xgboost gradient boosted machines.
+
+```{targets submodel_specs, tar_globals = TRUE}
+svm = parsnip::svm_linear(
+  mode = 'classification', 
+  engine = 'kernlab', 
+  cost = tune())
+rf = parsnip::rand_forest(
+  mode = 'classification',
+  trees = tune(),
+  mtry = tune())
+xg = parsnip::set_engine(
+  parsnip::boost_tree(
+    mode = 'classification',
+    tree_depth = tune(),
+    mtry = tune(), 
+    trees = tune(),
+    learn_rate = tune()),
+  'xgboost', 
+  objective = 'binary:logistic')
+
+s_params = tibble::tribble(~NAME, ~MODEL,
+                           'svm', quote(svm)
+                           ,'rf', quote(rf)
+                           ,'xg', quote(xg)
+)
+s_params$TUNER = 'bayes'
+s_params$nm = s_params$NAME
+
+  
+
+```
+
+The stacking framework requires the submodels/child models to be fit with crossvalidation (as a check against overfitting). As such, the training dataset is subdivided into 5 approximately equal sized chunks.
+
+```{targets submod-folds}
+list(
+  tar_target(tfolds, command = make_folds(test_train_split[2], screener))
+)
+```
+
+The models are tuned via bayesian hyperparameter tuning and the best performing models are considered for inclusion in the ensemble.
+
+```{targets submod-fit}
+submods = list(
+  tarchetypes::tar_map(
+    values = s_params,
+    names = 'nm',
+    tar_target(submod,
+               fit_submodel(
+                 train = test_train_split[2],
+                 screener = screener,
+                 folds = tfolds,
+                 m = MODEL,
+                 theform = f,
+                 apply_screen = apply_screen
+                )
+              )
+  )
+)
+
+```
+
 ### Stacked ensemble model
 
-## Predicting matchiness
+The submodels are ensembled together via a lasso regression. The output model object is also saved.
+
+```{targets z-ensemble}
+list(
+tarchetypes::tar_combine(
+    model,
+    submods,
+    command = create_stacked_model(
+      !!!.x,
+      mnames = s_params$nm,
+      screener = screener,
+      bounds = bounds
+    )
+  ),
+  tar_target(model_path,
+  {
+    saveRDS(model, file.path(outdir, 'model.rds'))
+    file.path(outdir, 'model.rds')
+  },
+  format = 'file')
+)
+```
+
+## Blocking
+
+Blocking creates the list of pairs to evaluate for match scores. In this implementation, a series of sql statements are evaluated and the pairs that fit one or more of those conditions are cached for evaluation via the linkage model.
+
+### Specifying blocking rules with SQL
+
+Blocking rules are specified as DuckDB friendly SQL statements and refer to a `l` and a `r` dataset. In this implementation, both `l` and `r` are the `data` target. The `splink` package[has a great write up on good blocking rules](https://moj-analytical-services.github.io/splink/demos/tutorials/03_Blocking.html) and the approach used in this example is heavily influenced by the splink package.
+
+Three rules are instantiated below:
+
+1.  Exact match on last name
+2.  Exact match on DOB
+3.  Fuzzy match on first name and exact match on year
+
+For further evaluation, a pair of records must meet at least one of the conditions.
+
+```{targets block-1}
+blocking_rules = c(
+  'l.last_name_noblank = r.last_name_noblank',
+  'l.dob_clean = r.dob_clean',
+  "jaro_winkler_similarity(l.first_name_noblank, r.first_name_noblank) >.7
+   and datepart('year', l.dob_clean) = datepart('year', r.dob_clean)"
+  )
+
+list(
+  tarchetypes::tar_group_by(qgrid, 
+                            command = make_block_rules(rules = blocking_rules),
+                            qid)
+)
+
+```
+
+### Computing and compiling pairs for evaluation
+
+Once the blocking rules have been properly formatted and prepared, they are then computed. The `deduplicate` argument in the `make_block` function (`blocks` target) governs whether records from the same source system are "allowed" to be included in the final set of blocked pairs.
+
+```{targets block-2}
+list(
+tar_target(blocks, make_block(q = qgrid, 
+                              data = data, 
+                              id_col = 'clean_hash',
+                              deduplicate = FALSE,
+                              output_folder = outdir),
+           pattern = map(qgrid),
+           format = 'file'),
+
+tar_target(bids, compile_blocks(blocks = blocks, 
+                                output_folder = outdir, 
+                                chk_size = 10000), format = 'file'),
+tar_target(bid_files, bids)
+)
+```
+
+At the end of the blocking process, the `bid_files` target links to a series of data.frames (saved as parquet files) that consist of the pairs that be assessed for match probability.
+
+## Predicting match scores
 
 ### Using the ensemble
 
+For all blocked pairs, a match score is generated and those where the match probability is \>.05 are saved. As described above, pairs are first evaluated by the lasso screening models and those that are within the range specified by `bounds` (default: [.01 - .99]) are further evaluated by the overall ensemble.
+
+```{targets z-predictions}
+tar_target(preds,
+        predict_links(
+          pairs = bid_files,
+          model = model_path,
+          output_folder = outdir,
+          data = data,
+          loc_history = lh,
+          zip_history = zh,
+          freq_tab_first_name = freqs[1],
+          freq_tab_last_name = freqs[2],
+          freq_tab_dob = freqs[3]
+        ), 
+        pattern = map(bid_files), 
+        iteration = 'list', 
+        format = 'file')
+```
+
 ### Fixed links
+
+```{targets fixed-links}
+tar_target(fixed, 
+             fixed_links(
+               data = data,
+               model_path = model_path,
+               fixed_vars = c('source_system', 'source_id'),
+               id_col = 'clean_hash',
+               output_file = file.path(outdir, 'fixed_links.parquet')
+             ), format = 'file'
+           )
+```
 
 ## Evaluation and cutoffs
 
 ### OOS validation
 
+```{targets a-cutoffs, tar_globals = T}
+i = 3
+cutoff_df = data.table::data.table(iter = 1:i, name = as.character(1:i))
+
+```
+
+```{targets b-cutoffs}
+cv_cutoffs = list(
+  tarchetypes::tar_map(
+    values = cutoff_df,
+    names = 'name',
+    tar_target(cv_co,
+                 cv_refit(
+                   train = test_train_split[2],
+                   model_path = model_path,
+                   apply_screen = apply_screen,
+                   iteration = iter,
+                   nfolds = 5,
+                   lasso = T 
+                 ))
+  )
+)
+```
+
 ### Identifying the cutpoint
+
+```{targets z-cutoffs}
+list(
+tarchetypes::tar_combine(
+    cutme,
+    cv_cutoffs,
+    command = identify_cutoff(
+      !!!.x,
+      test = test_train_split[1],
+      mods = model_path
+    )
+  ),
+  tar_target(cutme_path,
+  {
+    saveRDS(cutme, file.path(outdir, 'cutme.rds'))
+    file.path(outdir, 'cutme.rds')
+  },
+  format = 'file')
+)
+```
 
 ## From 1:1 links to networks
 
 ### Aggregating from hash ids to source ids
+
+```{targets compile-components}
+tar_target(components, 
+           compile_links(
+             preds,
+             fixed,
+             data = data, 
+             id_col = 'clean_hash',
+             cutpoint = cutme$cutpoint,
+             output_folder = outdir
+           ), format = 'file')
+```
 
 ### Applying constraints
 
@@ -182,7 +597,7 @@ E.g. only one death per network
 
 ### Assessing the evaluation metrics
 
-### Manual evaluation hueristics
+### Manual evaluation heuristics
 
 #### Large low density clusters
 

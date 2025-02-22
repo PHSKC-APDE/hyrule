@@ -17,8 +17,8 @@
 init_data = function(input, output_file = NULL, ...){
 
   # Load data ----
-  if(is.character(input) && file.exists(input)){
-    ids = arrow::read_parquet(input)
+  if(is.character(input) && all(file.exists(input))){
+    ids = rbindlist(lapply(input, arrow::read_parquet))
   }else if (is.function(input)){
     ids = input(...)
   }else if(is.data.frame(input)){
@@ -89,11 +89,11 @@ init_data = function(input, output_file = NULL, ...){
   ## That said, source id (in the test data, the "id" column) still provides some information.
   ## As such, the next step fills in missing data when everything but one value is NA
   nms = c('dob_clean', 'sex_clean', 'first_name_noblank', 'middle_name_noblank', 'last_name_noblank')
-  data.table::setorder(ids, id, first_name_noblank, last_name_noblank)
-  ids[, (nms) := lapply(.SD, hyrule::fillblanks), .SDcols = nms, by = c('id')]
+  data.table::setorder(ids, source_id, first_name_noblank, last_name_noblank)
+  ids[, (nms) := lapply(.SD, hyrule::fillblanks), .SDcols = nms, by = c('source_system', 'source_id')]
 
   # Keep only the required columns for matching ----
-  ids = ids[, .(source_system, source_id = id, first_name_noblank, middle_name_noblank, last_name_noblank, sex_clean, dob_clean)]
+  ids = ids[, .(source_system, source_id, first_name_noblank, middle_name_noblank, last_name_noblank, sex_clean, dob_clean)]
   ids = unique(ids)
 
   # Create a hash id ----

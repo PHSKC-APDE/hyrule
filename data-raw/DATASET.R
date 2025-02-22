@@ -27,9 +27,10 @@ dos = dos[simulant_id %in% c(mtch, droppers[drop_split == 2])]
 
 # Create fake location info
 ## Using fake north carolina
-uniq_locs = unique(rbind(uno, dos)[, .(street_number, street_name)])
+uniq_locs = unique(rbind(uno, dos)[!is.na(street_number) & !is.na(street_name), .(street_number, street_name)])
 uniq_locs[, id := .I]
 nc <- st_read(system.file("shape/nc.shp", package="sf"))
+nc = st_transform(nc, crs = 32119) # project/convert to meters
 pts = st_sample(nc,size = nrow(uniq_locs))
 pts = st_sf(id = seq_len(length(pts)), 'geom' = pts, sf_column_name = 'geom')
 
@@ -41,8 +42,8 @@ uniq_locs = cbind(uniq_locs, st_coordinates(pts))
 uniq_locs$zip_code = pts$zip_code
 
 ## Randomly drop some locations
-### Drop 30% of XY and 15% (30 * .5) of ZIP code
-uniq_locs = uniq_locs[sample(seq_len(.N), floor(.N * .3)), c('X', 'Y') := NA ]
+### Drop 10% of XY and 5% (5 * .5) of ZIP code
+uniq_locs = uniq_locs[sample(seq_len(.N), floor(.N * .1)), c('X', 'Y') := NA ]
 zipna = sample(uniq_locs[is.na(X), id], size = floor(.5 * nrow(uniq_locs[is.na(X)])))
 uniq_locs[zipna, zip_code := NA]
 
@@ -73,9 +74,9 @@ usethis::use_data(fake_two, overwrite = TRUE)
 arrow::write_parquet(fake_two, 'data-raw/fake_two.parquet')
 
 # Make some training data
-mp = sample(mtch, 100)
-nop_1 = sample(fake_one$simulant_id, 100)
-nop_2 = sample(fake_two$simulant_id, 100)
+mp = sample(mtch, 400)
+nop_1 = sample(fake_one$source_id, 225)
+nop_2 = sample(fake_two$source_id, 225)
 
 train = rbind(
   data.table(id1 = mp, id2 = mp, pair = 1),

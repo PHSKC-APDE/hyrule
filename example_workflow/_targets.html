@@ -361,6 +361,8 @@ this document</a>
 <ul>
 <li><a href="#useful-concepts" id="toc-useful-concepts">Useful
 Concepts</a></li>
+<li><a href="#machines-vs.-probabilistic-methods" id="toc-machines-vs.-probabilistic-methods">Machines vs. probabilistic
+methods</a></li>
 <li><a href="#code-location" id="toc-code-location">Code
 Location</a></li>
 <li><a href="#glossary" id="toc-glossary">Glossary</a></li>
@@ -378,27 +380,26 @@ setup</a></li>
 <ul>
 <li><a href="#prepare-data" id="toc-prepare-data">Prepare Data</a>
 <ul>
-<li><a href="#main-identifiers" id="toc-main-identifiers">Main
+<li><a href="#an-aside-on-types-of-identifiers" id="toc-an-aside-on-types-of-identifiers">An aside on types of
+identifiers</a></li>
+<li><a href="#primary-identifiers" id="toc-primary-identifiers">Primary
 Identifiers</a></li>
 <li><a href="#secondary-identifiers" id="toc-secondary-identifiers">Secondary identifiers</a></li>
+<li><a href="#contextual-variables" id="toc-contextual-variables">Contextual variables</a></li>
 <li><a href="#musings-on-how-to-clean-data" id="toc-musings-on-how-to-clean-data">Musings on how to clean
 data</a></li>
 </ul></li>
 <li><a href="#training-data" id="toc-training-data">Training data</a>
 <ul>
-<li><a href="#creating-new-training-data" id="toc-creating-new-training-data">Creating new training data</a></li>
+<li><a href="#creating-new-training-data" id="toc-creating-new-training-data">Creating (new) training
+data</a></li>
+<li><a href="#prepping-training-data-for-this-workflow" id="toc-prepping-training-data-for-this-workflow">Prepping training data
+for this workflow</a></li>
 <li><a href="#specifying-a-formula" id="toc-specifying-a-formula">Specifying a formula</a></li>
-<li><a href="#making-a-model-frame" id="toc-making-a-model-frame">Making
-a model frame</a></li>
+<li><a href="#creating-the-variables" id="toc-creating-the-variables">Creating the variables</a></li>
+<li><a href="#compile-training-data" id="toc-compile-training-data">Compile training data</a></li>
 <li><a href="#testtrain-split" id="toc-testtrain-split">Test/train
 split</a></li>
-</ul></li>
-<li><a href="#blocking" id="toc-blocking">Blocking</a>
-<ul>
-<li><a href="#specifying-blocking-rules-with-sql" id="toc-specifying-blocking-rules-with-sql">Specifying blocking rules
-with SQL</a></li>
-<li><a href="#computing-and-compiling-pairs-for-evaluation" id="toc-computing-and-compiling-pairs-for-evaluation">Computing and
-compiling pairs for evaluation</a></li>
 </ul></li>
 <li><a href="#model-specification" id="toc-model-specification">Model
 specification</a>
@@ -407,6 +408,13 @@ specification</a>
 model</a></li>
 <li><a href="#submodels" id="toc-submodels">Submodels</a></li>
 <li><a href="#stacked-ensemble-model" id="toc-stacked-ensemble-model">Stacked ensemble model</a></li>
+</ul></li>
+<li><a href="#blocking" id="toc-blocking">Blocking</a>
+<ul>
+<li><a href="#specifying-blocking-rules-with-sql" id="toc-specifying-blocking-rules-with-sql">Specifying blocking rules
+with SQL</a></li>
+<li><a href="#computing-and-compiling-pairs-for-evaluation" id="toc-computing-and-compiling-pairs-for-evaluation">Computing and
+compiling pairs for evaluation</a></li>
 </ul></li>
 <li><a href="#predicting-matchiness" id="toc-predicting-matchiness">Predicting matchiness</a>
 <ul>
@@ -431,8 +439,8 @@ ids to source ids</a></li>
 <ul>
 <li><a href="#assessing-the-evaluation-metrics" id="toc-assessing-the-evaluation-metrics">Assessing the evaluation
 metrics</a></li>
-<li><a href="#manual-evaluation-hueristics" id="toc-manual-evaluation-hueristics">Manual evaluation
-hueristics</a></li>
+<li><a href="#manual-evaluation-heuristics" id="toc-manual-evaluation-heuristics">Manual evaluation
+heuristics</a></li>
 </ul></li>
 </ul></li>
 <li><a href="#odds-and-ends" id="toc-odds-and-ends">Odds and ends</a>
@@ -467,7 +475,14 @@ generalized and flexible.</p>
 and/or methodological concepts:</p>
 <ol style="list-style-type: decimal">
 <li><code>targets</code> and <code>tarchetypes</code>: These R-packages
-are used to orchestrate the linkage pipeline.</li>
+are used to orchestrate the linkage pipeline. A targets pipeline is a
+structured way of specifying a directed acyclic graph that governs how
+inputs, intermediate steps, and outputs all interact/flow into each
+other. The pipeline can identify changes in the code and inputs for a
+particular step and propagate the need to update to downstream steps.
+Via some partner packages (e.g. <code>crew</code>), a targets pipeline
+can be computed in parallel fairly easily as the full dependency chain
+is pre-specified.</li>
 <li><code>data.table</code>, <code>duckdb</code> (R-package, overall
 reference): Most of the data manipulation within this pipeline is either
 conducted via the <code>data.table</code> R-package or
@@ -498,13 +513,16 @@ More details can be found here. Implementation is done via
 <code>DuckDB</code> routines.</li>
 </ol>
 </div>
+<div id="machines-vs.-probabilistic-methods" class="section level3">
+<h3>Machines vs. probabilistic methods</h3>
+</div>
 <div id="code-location" class="section level3">
 <h3>Code Location</h3>
 </div>
 <div id="glossary" class="section level3">
 <h3>Glossary</h3>
 <ol style="list-style-type: decimal">
-<li>Source id</li>
+<li>Source id and source system</li>
 <li>hash id</li>
 <li></li>
 </ol>
@@ -522,7 +540,10 @@ More details can be found here. Implementation is done via
 <pre class="r"><code>library(targets)
 library(&#39;hyrule&#39;)
 library(tarchetypes)
-library(glue)</code></pre>
+library(glue)
+library(&#39;sf&#39;)
+#&gt; Linking to GEOS 3.12.2, GDAL 3.9.3, PROJ 9.4.1; sf_use_s2() is TRUE
+library(&#39;data.table&#39;)</code></pre>
 <p>Remove the <code>_targets_r</code> directory previously written by
 non-interactive runs of the report.</p>
 <pre class="r"><code>tar_unscript()</code></pre>
@@ -532,7 +553,7 @@ non-interactive runs of the report.</p>
 <p>These packages and functions are required to run the pipeline (and
 not just set it up).</p>
 <pre class="r"><code>tar_option_set(
-  packages = c(&#39;data.table&#39;, &#39;hyrule&#39;, &#39;stringr&#39;, &#39;arrow&#39;, &#39;duckdb&#39;, &#39;DBI&#39;)
+  packages = c(&#39;data.table&#39;, &#39;hyrule&#39;, &#39;stringr&#39;, &#39;arrow&#39;, &#39;duckdb&#39;, &#39;DBI&#39;, &#39;glue&#39;, &#39;stringr&#39;, &#39;sf&#39;, &#39;tidymodels&#39;, &#39;workflows&#39;, &#39;stacks&#39;, &#39;dplyr&#39;, &#39;ranger&#39;, &#39;xgboost&#39;, &#39;rlang&#39;, &#39;igraph&#39;)
 )
 
 # Much of the code/functions to make the pipeline run are stored in example_workflow/R
@@ -541,6 +562,10 @@ tar_source()
 # Specify input and output directories
 outdir = &#39;output/&#39;
 
+# other global variables
+apply_screen = TRUE
+bounds = c(.01, .99)
+
 #&gt; Establish _targets.R and _targets_r/globals/define-globals.R.</code></pre>
 </div>
 </div>
@@ -548,63 +573,167 @@ outdir = &#39;output/&#39;
 <h1>ML Record Linkage Pipeline</h1>
 <div id="prepare-data" class="section level2">
 <h2>Prepare Data</h2>
-<div id="main-identifiers" class="section level3">
-<h3>Main Identifiers</h3>
-<p>This section loads, cleans, organizes, and stores data inputs. These
-inputs include things like ZIP centrists, and nickname lists. Derivative
-products, like name frequencies should also be computed at this
-step.</p>
-<p>There are two main approaches to record linkage as handled by this
-template/example:</p>
+<p>This section loads, cleans, organizes, and stores data inputs.</p>
+<p>There are two main approaches to record linkage:</p>
 <ol style="list-style-type: decimal">
-<li>Link only: Two data sets are assumed to have no duplicates</li>
+<li>Link only: Data sets are assumed to have no duplicates, and
+therefore within dataset linkages are computed. This is specified during
+the blocking step, and in this example, largely depends on a
+<code>source_system</code> variable.</li>
 <li>De-duplicate (and link): One or more datasets are appended together
-and within and between dataset linkages are computed. If only one
-dataset is provided then the operation is purely de-duplication</li>
+and within and between dataset linkages are computed.</li>
 </ol>
-<p>This example is primarily focused on option 1, although some code for
-#2 is provided where relevant (commented out)</p>
-<p>The initial load and clean step is primarily for primary identifiers
-(e.g. name, dob, or ssn). Secondary identifiers (e.g. location) can also
-be cleaned during this step (e.g. in the <code>init_data.R</code></p>
+<div id="an-aside-on-types-of-identifiers" class="section level3">
+<h3>An aside on types of identifiers</h3>
+<p>For this workflow, identifiers and other variables come in a few main
+flavors:</p>
+<ol style="list-style-type: decimal">
+<li>Primary identifiers are things like source system, source id, name,
+date of birth, social security, and sex/gender. These variables
+generally do not vary over time – or at least, if they do, it happens
+only sporadically. These identifiers (or some similar subset) represent
+the core of a record and are often the basis for blocking criteria.</li>
+<li>Secondary identifiers are things like address, ZIP code, and phone
+number. These are things that may change with regularity and where the
+temporal characteristics of their appearance may be informative.</li>
+<li>Contextual variables are all other things that may be used for
+determining whether record A represents the same entity as record B.
+Some examples may include: household size, term frequency adjustment,
+possibility of being a twin, etc.</li>
+</ol>
+</div>
+<div id="primary-identifiers" class="section level3">
+<h3>Primary Identifiers</h3>
+<p>In the code below, the <code>tarchetypes::tar_files_input</code>
+ingests the file path of the supplied data files and makes a checkpoint
+on the file – beginning the dependency chain</p>
+<p>The <code>init_data</code> function loads the data passed via the
+<code>input</code> argument and uses some hyrule functions to do common
+cleaning routines (in a somewhat opinionated manner). In this case, the
+two input datasets (<code>input_1</code> and <code>input_2</code>) are
+appended together (via <code>arrow::read_parquet</code> within the
+<code>init_data</code> function) and processed at the same time because
+the rest of the process assumes one “data” file/table with a
+<code>source_system</code> column that differentiates between the data
+specified by <code>input_1</code> versus <code>input_2</code>.</p>
 <pre class="r"><code>list(
   # file paths to data
   tarchetypes::tar_files_input(input_1, &#39;../data-raw/fake_one.parquet&#39;),
   tarchetypes::tar_files_input(input_2, &#39;../data-raw/fake_two.parquet&#39;),
   
   # Load, clean, and save datasets
-  tar_target(data_1, init_data(input_1, file.path(outdir, &#39;d1.parquet&#39;)), format = &#39;file&#39;),
-  
-  # Specify second dataset for link only example
-  tar_target(data_2, init_data(input_2, file.path(outdir, &#39;d2.parquet&#39;)), format = &#39;file&#39;),
+  tar_target(data, init_data(c(input_1, input_2), file.path(outdir, &#39;data.parquet&#39;)), format = &#39;file&#39;)
 
-  # if this is a linkdedupe situation, you&#39;d probably want to do the following instead of : 
-  # tar_target(data_2, data_1, format = &#39;file)
-  
-  # Create frequency tables
-  tar_target(freqs, create_frequency_table(tables = list(data_1, data_2),
-                                           columns = c(&#39;first_name_noblank&#39;, &#39;last_name_noblank&#39;, &#39;dob_clean&#39;), 
-                                           output_folder = outdir))
 
 )
-#&gt; Establish _targets.R and _targets_r/targets/load-data.R.</code></pre>
+#&gt; Establish _targets.R and _targets_r/targets/primary-identifiers.R.</code></pre>
+<p>Within the <code>init_data</code> function, the following steps
+occur:</p>
+<ol style="list-style-type: decimal">
+<li>Via <code>hyrule::clean_names</code>, name columns are stripped of
+non-character values and common prefixes/suffixes are removed.
+<code>hyrule::remove_spaces</code> then removes any white space
+characters.</li>
+<li>Date of birth is converted into a date format and restricted to be
+from 1901 to the current year.</li>
+<li>Sex is converted into a standard character column ( e.g. ‘Male’ and
+‘Female’ is converted to ‘M’ and ‘F’). Anything not in those two
+categories is set to NA.</li>
+<li>Some SSN cleaning code is available as comments. This code, if
+applied, converts SSNs to strings of only numerics, removes common junk
+SSNs, and converts things to a standardized 9 digit number (as a
+character column to allow for SSNs beginning with 0).</li>
+<li>Rows with too much missing information are dropped from the
+dataset</li>
+<li>Rows with partial data density are filled in using data from other
+rows within the same source id. For example, if rows 1, 2 and 3 all
+derive from the same source id, and rows 2 and 3 have the same middle
+initial value but row 1 is NA, that NA is overwritten by the value
+present in rows 2 and 3. In the event that 2 and 3 disagree, then row 1
+remains blank for that variable.</li>
+</ol>
+<p>While these steps are good starting points for any linkage project,
+they should not be considered immutable or complete. Each project will
+likely require its own data cleaning routines as data can be messy in
+nearly infinite ways.</p>
+<div id="row-hashes" class="section level4">
+<h4>Row hashes</h4>
+<p>The final main step fo the <code>init_data</code> function is the
+creation of a row-wise hash is generated based off the cleaned primary
+identifiers – in this case, source system, source id, name, dob, and
+sex. This hash will subsequently be used as the main unique row
+identifier and it is used to nest variations of primary variables within
+a given source system and source id combination.</p>
+<p>Practically, using the hash (instead of source id) as the low-level
+identifier instead of source id allows for more data available by source
+id to be leveraged to improve the linkage process. For example, if
+source ID sometimes has Richard as the first name and sometimes as Rick,
+then both permutations can be used for blocking and evaluating possible
+links to identify more matches.</p>
+<p>Handling the data in this way (row based) instead of aggregating
+thing into list-columns and using set operations also improves
+computational efficiency – especially for blocking.</p>
+</div>
 </div>
 <div id="secondary-identifiers" class="section level3">
 <h3>Secondary identifiers</h3>
-<p>When secondary identifiers (ones that are not part of the id hash,
-for example, address or zip code) have multiple entries per source id
-(e.g. over time), analyzing them as histories/lists may be more
-effective. For example, given the address histories for two records,
-variables that flag whether the histories overlapped at the same
-geographic (and temporal) location is useful for predicting whether they
-represent the same entity.</p>
+<p>Secondary identifiers are primarily variables not included within the
+id hash and/or ones that will not be used for blocking. These variables
+are also more likely to change over time and/or have higher levels of
+missingness. Common examples include addresses and ZIP code. Unlike the
+primary identifiers, these data are treated as list
+columns/sets/histories (e.g. does the address history for record A
+overlap with that of record B) and are kept at the source id level (at
+least in this document).</p>
 <p>Note: The sample data used in this document only has one (or zero)
 addresses associated with each source id. However, the “history”
 approach to data transformation and analysis is used for demonstration
 purposes. The code (or at least the method) is scalable to longer
 histories and a one entry history is legitimate in any case.</p>
-<pre class="r"><code>
-#&gt; Establish _targets.R and _targets_r/targets/load-histories.R.</code></pre>
+<pre class="r"><code>list(
+  # Prepare the location histories
+  tar_target(
+    lh,
+    create_location_history(
+      input = c(input_1, input_2),
+      # This changes based on data storage/format
+      output_file = file.path(outdir, &#39;lh.parquet&#39;),
+      id_cols = c(&#39;source_system&#39;, &#39;source_id&#39;),
+      X = &#39;X&#39;,
+      Y = &#39;Y&#39;
+    ),
+    format = &#39;file&#39;
+  ),
+  
+  # Prepare ZIP code histories
+  tar_target(
+    zh,
+    create_history_variable(
+    input = c(input_1,input_2),
+    output_file = file.path(outdir, &#39;zh.parquet&#39;),
+    id_cols = c(&#39;source_system&#39;, &#39;source_id&#39;),
+    variable = &#39;zip_code&#39;,
+    clean_function = clean_zip_code
+    ),
+    format = &#39;file&#39;
+  )
+)
+#&gt; Establish _targets.R and _targets_r/targets/2nd-vars.R.</code></pre>
+</div>
+<div id="contextual-variables" class="section level3">
+<h3>Contextual variables</h3>
+<pre class="r"><code>list(
+  # Create frequency tables
+  tar_target(
+    freqs,
+    create_frequency_table(
+      tables = list(data),
+      columns = c(&#39;first_name_noblank&#39;, &#39;last_name_noblank&#39;, &#39;dob_clean&#39;),
+      output_folder = outdir
+    ), format = &#39;file&#39;
+  )
+)
+#&gt; Establish _targets.R and _targets_r/targets/context-variables.R.</code></pre>
 </div>
 <div id="musings-on-how-to-clean-data" class="section level3">
 <h3>Musings on how to clean data</h3>
@@ -615,61 +744,392 @@ histories and a one entry history is legitimate in any case.</p>
 <div id="training-data" class="section level2">
 <h2>Training data</h2>
 <div id="creating-new-training-data" class="section level3">
-<h3>Creating new training data</h3>
+<h3>Creating (new) training data</h3>
+<p>Unlike probabilistic methods (e.g. splink), machine learning methods
+require training data to operate. When beginning a new project, a few
+options are available:</p>
+<ol style="list-style-type: decimal">
+<li>Borrow from a previously fit ML model</li>
+<li>Borrow from a probabilistic model</li>
+<li>Use some deterministic rules</li>
+<li>Randomly sampled pairs, if you are mad</li>
+</ol>
+</div>
+<div id="prepping-training-data-for-this-workflow" class="section level3">
+<h3>Prepping training data for this workflow</h3>
+<p>The <code>pairs</code> dataset within hyrule is at the source id
+rather than the hash level. This next target/block of code converts from
+source id to hash id. Generally, this step will not be required as the
+training data will be natively at the hash level. Additionally, most
+users will have their training pairs stored in a database and/or as a
+set of loadable files (e.g. csv) that can be read in with
+<code>tarchetypes::tar_files_input</code>.</p>
+<pre class="r"><code>list(
+  # Note: This step is mostly just so the example(s) can run
+  tar_target(train_input,
+             convert_sid_to_hid(
+               pairs = hyrule::train, 
+               arrow::read_parquet(data),
+               output_file = file.path(outdir, &#39;training.parquet&#39;)
+               ), format = &#39;file&#39;
+             )
+  
+  # usually something like the following is better
+  #tarchetypes::tar_files_input(train_input,&#39;FILEPATHS to training data goes here&#39;))
+)
+
+#&gt; Establish _targets.R and _targets_r/targets/prep-traindat.R.</code></pre>
 </div>
 <div id="specifying-a-formula" class="section level3">
 <h3>Specifying a formula</h3>
+<p>Like most modelling/regression/machine learning exercises, a formula
+must be specified. Something like <code>pair ~ varA + varB + varC</code>
+where <code>pair</code> refers to the column in the training data
+indicating whether two records are a match and <code>varA</code>,
+<code>varB</code>, and <code>varC</code> are variables that are likely
+predictive of the match-iness between two records. For this exercise,
+the following variables are of interest (and will be computed – see
+below):</p>
+<ol style="list-style-type: decimal">
+<li><code>dob_year_exact</code>: exact match of year of birth</li>
+<li><code>dob_mdham</code>: hamming distance between month and day of
+birth</li>
+<li><code>gender_agree</code>: gender explicitly matches</li>
+<li><code>first_name_jw</code>: jaro-winkler distance of first
+names</li>
+<li><code>last_name_jw</code>: jaro-winkler distance of last names</li>
+<li><code>name_swap_jw</code>: jaro-winkler distance of names with first
+and last swapped</li>
+<li><code>complete_name_dl</code>: daimaru-levenstein distance between
+the full names. Full name is either first + last or first + middle +
+last. The minimum distance of the two versions is used.</li>
+<li><code>middle_initial_agree</code>: Explicit match of middle
+initial</li>
+<li><code>last_in_last</code>: where either records’ whole last name is
+contained in the other one</li>
+<li><code>first_name_freq</code>: Scaled frequency tabulation of first
+names</li>
+<li><code>last_name_freq</code>: Scaled frequency tabulation of last
+names</li>
+<li><code>zip_overlap</code>: Binary flag indicating zip code histories
+ever overlapped (not accounting for time)</li>
+<li><code>exact_location</code>: binary flag indicating address
+histories overlap within 3 meters (location only – not
+spatio-temporal).</li>
+</ol>
+<pre class="r"><code>f = pair ~ dob_year_exact + dob_mdham + gender_agree +
+  first_name_jw + last_name_jw + name_swap_jw +
+  complete_name_dl + middle_initial_agree + last_in_last +
+  first_name_freq + last_name_freq +
+  zip_overlap + exact_location
+  
+
+#&gt; Establish _targets.R and _targets_r/globals/formula.R.</code></pre>
 </div>
-<div id="making-a-model-frame" class="section level3">
-<h3>Making a model frame</h3>
+<div id="creating-the-variables" class="section level3">
+<h3>Creating the variables</h3>
+<p>To create the variables specified by the formula, this workflow uses
+a function called <code>make_model_frame</code>.
+<code>make_model_frame</code> takes a number of inputs (datasets, the
+training pairs, frequency tables, etc.) and computes the required
+columns from the data. The actual computation is handled in a temporary
+DuckDB database so that expressive (and relatively portable) sql can be
+used. DuckDB is also quite clever when working with parquet files and
+optimizing queries.</p>
+</div>
+<div id="compile-training-data" class="section level3">
+<h3>Compile training data</h3>
+<div id="load-and-prepare-training-data" class="section level4">
+<h4>Load and prepare training data</h4>
+<p>At this stage, the <code>train_input</code> step is a basic
+data.frame (technically a file path to a data.frame) with three columns:
+<code>id1</code>, <code>id2</code>, and <code>pair</code>. The first two
+columns specify pairs of records while the <code>pair</code> column is a
+binary flag indicating whether the two (hash) ids are a match (1) or not
+(0). To be usable for model fitting, the training pairs must be screened
+for duplicates, contradictions (e.g. the first wave of training data
+says A !=B while the second set says A = B) must be reconciled, and the
+ids must be checked for validity (e.g. the input data might have changed
+the hash for a particular row so that a given pair in the training data
+doesn’t have a counterpart in the main data).</p>
+</div>
+<div id="computing-prediction-variables" class="section level4">
+<h4>Computing prediction variables</h4>
+<p>Once the training pairs are prepared, the predictor variables must be
+created. In this workflow, the <code>make_model_frame</code> function is
+used to do this (usually nested within another function). This function
+takes in a few parquet file paths (and/or table specified by
+<code>DBI::Id()</code>) and generates a sql query that when executed in
+the the correct environment will return a data frame containing pair
+level variables.</p>
+<p>For preparing the training data, <code>compile_training_data</code>
+loads and standardizes labeled pairs, uses <code>make_model_frame</code>
+(with the previously created targets as inputs) to go from labeled pairs
+to “training data.” Before saving the results, some sanity checks are
+performed to ensure that too many of the labeled pairs get dropped due
+to missing data or some other set of data gremlins.</p>
+<pre class="r"><code>
+list(
+  tar_target(
+    train_test_data, 
+    compile_training_data(
+        input = train_input,
+        output_file = file.path(outdir, &#39;train_and_test.parquet&#39;),
+        formula = f,
+        data = data,
+        loc_history = lh,
+        zip_history = zh,
+        freq_tab_first_name = freqs[1],
+        freq_tab_last_name = freqs[2],
+        freq_tab_dob = freqs[3]
+      )
+    )
+  )
+
+#&gt; Establish _targets.R and _targets_r/targets/training-data.R.</code></pre>
+</div>
 </div>
 <div id="testtrain-split" class="section level3">
 <h3>Test/train split</h3>
-</div>
-</div>
-<div id="blocking" class="section level2">
-<h2>Blocking</h2>
-<div id="specifying-blocking-rules-with-sql" class="section level3">
-<h3>Specifying blocking rules with SQL</h3>
-</div>
-<div id="computing-and-compiling-pairs-for-evaluation" class="section level3">
-<h3>Computing and compiling pairs for evaluation</h3>
+<pre class="r"><code>list(
+  tar_target(
+    training_hash,
+    rlang::hash(arrow::read_parquet(train_test_data))
+  ),
+  
+  tar_target(test_train_split, 
+             split_tt(hash = training_hash, 
+                      training_data = train_test_data, 
+                      fraction = .15, 
+                      train_of = file.path(outdir, &#39;train.parquet&#39;), 
+                      test_of = file.path(outdir, &#39;test.parquet&#39;))
+             , format = &#39;file&#39;)
+  
+)
+#&gt; Establish _targets.R and _targets_r/targets/split-test-train.R.</code></pre>
 </div>
 </div>
 <div id="model-specification" class="section level2">
 <h2>Model specification</h2>
 <div id="screening-model" class="section level3">
 <h3>Screening model</h3>
+<pre class="r"><code>list(
+  tar_target(screener, command = 
+               fit_screening_model(test_train_split[2], bounds, f))
+)
+#&gt; Establish _targets.R and _targets_r/targets/screener.R.</code></pre>
 </div>
 <div id="submodels" class="section level3">
 <h3>Submodels</h3>
+<pre class="r"><code>svm = parsnip::svm_linear(
+  mode = &#39;classification&#39;, 
+  engine = &#39;kernlab&#39;, 
+  cost = tune())
+rf = parsnip::rand_forest(
+  mode = &#39;classification&#39;,
+  trees = tune(),
+  mtry = tune())
+xg = parsnip::set_engine(
+  parsnip::boost_tree(
+    mode = &#39;classification&#39;,
+    tree_depth = tune(),
+    mtry = tune(), 
+    trees = tune(),
+    learn_rate = tune()),
+  &#39;xgboost&#39;, 
+  objective = &#39;binary:logistic&#39;)
+
+s_params = tibble::tribble(~NAME, ~MODEL,
+                           &#39;svm&#39;, quote(svm)
+                           ,&#39;rf&#39;, quote(rf)
+                           ,&#39;xg&#39;, quote(xg)
+)
+s_params$TUNER = &#39;bayes&#39;
+s_params$nm = s_params$NAME
+
+  
+
+#&gt; Establish _targets.R and _targets_r/globals/submodel_specs.R.</code></pre>
+<pre class="r"><code>list(
+  tar_target(tfolds, command = make_folds(test_train_split[2], screener))
+)
+#&gt; Establish _targets.R and _targets_r/targets/submod-folds.R.</code></pre>
+<pre class="r"><code>submods = list(
+  tarchetypes::tar_map(
+    values = s_params,
+    names = &#39;nm&#39;,
+    tar_target(submod,
+               fit_submodel(
+                 train = test_train_split[2],
+                 screener = screener,
+                 folds = tfolds,
+                 m = MODEL,
+                 theform = f,
+                 apply_screen = apply_screen
+                )
+              )
+  )
+)
+
+#&gt; Establish _targets.R and _targets_r/targets/submod-fit.R.</code></pre>
 </div>
 <div id="stacked-ensemble-model" class="section level3">
 <h3>Stacked ensemble model</h3>
+<pre class="r"><code>list(
+tarchetypes::tar_combine(
+    model,
+    submods,
+    command = create_stacked_model(
+      !!!.x,
+      mnames = s_params$nm,
+      screener = screener,
+      bounds = bounds
+    )
+  ),
+  tar_target(model_path,
+  {
+    saveRDS(model, file.path(outdir, &#39;model.rds&#39;))
+    file.path(outdir, &#39;model.rds&#39;)
+  },
+  format = &#39;file&#39;)
+)
+#&gt; Establish _targets.R and _targets_r/targets/z-ensemble.R.</code></pre>
+</div>
+</div>
+<div id="blocking" class="section level2">
+<h2>Blocking</h2>
+<div id="specifying-blocking-rules-with-sql" class="section level3">
+<h3>Specifying blocking rules with SQL</h3>
+<pre class="r"><code>blocking_rules = c(
+  &#39;l.last_name_noblank = r.last_name_noblank&#39;,
+  &#39;l.dob_clean = r.dob_clean&#39;,
+  &quot;jaro_winkler_similarity(l.first_name_noblank, r.first_name_noblank) &gt;.7
+   and datepart(&#39;year&#39;, l.dob_clean) = datepart(&#39;year&#39;, r.dob_clean)&quot;
+  )
+
+list(
+  tarchetypes::tar_group_by(qgrid, 
+                            command = make_block_rules(rules = blocking_rules),
+                            qid)
+)
+
+#&gt; Establish _targets.R and _targets_r/targets/block-1.R.</code></pre>
+</div>
+<div id="computing-and-compiling-pairs-for-evaluation" class="section level3">
+<h3>Computing and compiling pairs for evaluation</h3>
+<pre class="r"><code>list(
+tar_target(blocks, make_block(q = qgrid, 
+                              data = data, 
+                              id_col = &#39;clean_hash&#39;,
+                              deduplicate = FALSE,
+                              output_folder = outdir),
+           pattern = map(qgrid),
+           format = &#39;file&#39;),
+
+tar_target(bids, compile_blocks(blocks = blocks, 
+                                output_folder = outdir, 
+                                chk_size = 10000), format = &#39;file&#39;),
+tar_target(bid_files, bids)
+)
+#&gt; Establish _targets.R and _targets_r/targets/block-2.R.</code></pre>
 </div>
 </div>
 <div id="predicting-matchiness" class="section level2">
 <h2>Predicting matchiness</h2>
 <div id="using-the-ensemble" class="section level3">
 <h3>Using the ensemble</h3>
+<pre class="r"><code>tar_target(preds,
+        predict_links(
+          pairs = bid_files,
+          model = model_path,
+          output_folder = outdir,
+          data = data,
+          loc_history = lh,
+          zip_history = zh,
+          freq_tab_first_name = freqs[1],
+          freq_tab_last_name = freqs[2],
+          freq_tab_dob = freqs[3]
+        ), 
+        pattern = map(bid_files), 
+        iteration = &#39;list&#39;, 
+        format = &#39;file&#39;)
+#&gt; Establish _targets.R and _targets_r/targets/z-predictions.R.</code></pre>
 </div>
 <div id="fixed-links" class="section level3">
 <h3>Fixed links</h3>
+<pre class="r"><code>tar_target(fixed, 
+             fixed_links(
+               data = data,
+               model_path = model_path,
+               fixed_vars = c(&#39;source_system&#39;, &#39;source_id&#39;),
+               id_col = &#39;clean_hash&#39;,
+               output_file = file.path(outdir, &#39;fixed_links.parquet&#39;)
+             ), format = &#39;file&#39;
+           )
+#&gt; Establish _targets.R and _targets_r/targets/fixed-links.R.</code></pre>
 </div>
 </div>
 <div id="evaluation-and-cutoffs" class="section level2">
 <h2>Evaluation and cutoffs</h2>
 <div id="oos-validation" class="section level3">
 <h3>OOS validation</h3>
+<pre class="r"><code>i = 3
+cutoff_df = data.table::data.table(iter = 1:i, name = as.character(1:i))
+
+#&gt; Establish _targets.R and _targets_r/globals/a-cutoffs.R.</code></pre>
+<pre class="r"><code>cv_cutoffs = list(
+  tarchetypes::tar_map(
+    values = cutoff_df,
+    names = &#39;name&#39;,
+    tar_target(cv_co,
+                 cv_refit(
+                   train = test_train_split[2],
+                   model_path = model_path,
+                   apply_screen = apply_screen,
+                   iteration = iter,
+                   nfolds = 5,
+                   lasso = T 
+                 ))
+  )
+)
+#&gt; Establish _targets.R and _targets_r/targets/b-cutoffs.R.</code></pre>
 </div>
 <div id="identifying-the-cutpoint" class="section level3">
 <h3>Identifying the cutpoint</h3>
+<pre class="r"><code>list(
+tarchetypes::tar_combine(
+    cutme,
+    cv_cutoffs,
+    command = identify_cutoff(
+      !!!.x,
+      test = test_train_split[1],
+      mods = model_path
+    )
+  ),
+  tar_target(cutme_path,
+  {
+    saveRDS(cutme, file.path(outdir, &#39;cutme.rds&#39;))
+    file.path(outdir, &#39;cutme.rds&#39;)
+  },
+  format = &#39;file&#39;)
+)
+#&gt; Establish _targets.R and _targets_r/targets/z-cutoffs.R.</code></pre>
 </div>
 </div>
 <div id="from-11-links-to-networks" class="section level2">
 <h2>From 1:1 links to networks</h2>
 <div id="aggregating-from-hash-ids-to-source-ids" class="section level3">
 <h3>Aggregating from hash ids to source ids</h3>
+<pre class="r"><code>tar_target(components, 
+           compile_links(
+             preds,
+             fixed,
+             data = data, 
+             id_col = &#39;clean_hash&#39;,
+             cutpoint = cutme$cutpoint,
+             output_folder = outdir
+           ), format = &#39;file&#39;)
+#&gt; Establish _targets.R and _targets_r/targets/compile-components.R.</code></pre>
 </div>
 <div id="applying-constraints" class="section level3">
 <h3>Applying constraints</h3>
@@ -684,8 +1144,8 @@ histories and a one entry history is legitimate in any case.</p>
 <div id="assessing-the-evaluation-metrics" class="section level3">
 <h3>Assessing the evaluation metrics</h3>
 </div>
-<div id="manual-evaluation-hueristics" class="section level3">
-<h3>Manual evaluation hueristics</h3>
+<div id="manual-evaluation-heuristics" class="section level3">
+<h3>Manual evaluation heuristics</h3>
 <div id="large-low-density-clusters" class="section level4">
 <h4>Large low density clusters</h4>
 </div>
