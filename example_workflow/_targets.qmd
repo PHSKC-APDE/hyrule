@@ -1,7 +1,7 @@
 ---
 title: "ML Record Linkage"
-output: 
-  html_document:
+format: 
+  gfm:
     toc: true
 ---
 
@@ -93,6 +93,11 @@ bounds = c(.01, .99)
 ```
 
 # ML Record Linkage Pipeline
+
+```{r, results = "asis", echo = FALSE}
+cat(c("```{mermaid}", targets::tar_mermaid(T), "```"), sep = "\n")
+```
+
 
 ## Prepare Data
 
