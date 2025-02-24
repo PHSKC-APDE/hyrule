@@ -374,7 +374,6 @@ Summary</a></li>
 <ul>
 <li><a href="#pipeline-setup" id="toc-pipeline-setup">Pipeline
 setup</a></li>
-<li><a href="#packages-and-functions" id="toc-packages-and-functions">Packages and functions</a></li>
 </ul></li>
 <li><a href="#ml-record-linkage-pipeline" id="toc-ml-record-linkage-pipeline">ML Record Linkage Pipeline</a>
 <ul>
@@ -386,8 +385,7 @@ identifiers</a></li>
 Identifiers</a></li>
 <li><a href="#secondary-identifiers" id="toc-secondary-identifiers">Secondary identifiers</a></li>
 <li><a href="#contextual-variables" id="toc-contextual-variables">Contextual variables</a></li>
-<li><a href="#musings-on-how-to-clean-data" id="toc-musings-on-how-to-clean-data">Musings on how to clean
-data</a></li>
+<li><a href="#other-data-cleaning-ideas" id="toc-other-data-cleaning-ideas">Other data cleaning ideas</a></li>
 </ul></li>
 <li><a href="#training-data" id="toc-training-data">Training data</a>
 <ul>
@@ -416,7 +414,7 @@ with SQL</a></li>
 <li><a href="#computing-and-compiling-pairs-for-evaluation" id="toc-computing-and-compiling-pairs-for-evaluation">Computing and
 compiling pairs for evaluation</a></li>
 </ul></li>
-<li><a href="#predicting-matchiness" id="toc-predicting-matchiness">Predicting matchiness</a>
+<li><a href="#predicting-match-scores" id="toc-predicting-match-scores">Predicting match scores</a>
 <ul>
 <li><a href="#using-the-ensemble" id="toc-using-the-ensemble">Using the
 ensemble</a></li>
@@ -424,18 +422,16 @@ ensemble</a></li>
 </ul></li>
 <li><a href="#evaluation-and-cutoffs" id="toc-evaluation-and-cutoffs">Evaluation and cutoffs</a>
 <ul>
-<li><a href="#oos-validation" id="toc-oos-validation">OOS
-validation</a></li>
-<li><a href="#identifying-the-cutpoint" id="toc-identifying-the-cutpoint">Identifying the cutpoint</a></li>
+<li><a href="#identifying-the-cutpoint-and-oos-statistics" id="toc-identifying-the-cutpoint-and-oos-statistics">Identifying the
+cutpoint and OOS statistics</a></li>
 </ul></li>
 <li><a href="#from-11-links-to-networks" id="toc-from-11-links-to-networks">From 1:1 links to networks</a>
 <ul>
-<li><a href="#aggregating-from-hash-ids-to-source-ids" id="toc-aggregating-from-hash-ids-to-source-ids">Aggregating from hash
-ids to source ids</a></li>
 <li><a href="#applying-constraints" id="toc-applying-constraints">Applying constraints</a></li>
-<li><a href="#create-identity-table" id="toc-create-identity-table">Create identity table</a></li>
+<li><a href="#identity-table" id="toc-identity-table">Identity
+Table</a></li>
 </ul></li>
-<li><a href="#did-is-work" id="toc-did-is-work">Did is work?</a>
+<li><a href="#did-it-work" id="toc-did-it-work">Did it work?</a>
 <ul>
 <li><a href="#assessing-the-evaluation-metrics" id="toc-assessing-the-evaluation-metrics">Assessing the evaluation
 metrics</a></li>
@@ -474,43 +470,49 @@ generalized and flexible.</p>
 <p>Users should familiarize themselves with the following R-packages
 and/or methodological concepts:</p>
 <ol style="list-style-type: decimal">
-<li><code>targets</code> and <code>tarchetypes</code>: These R-packages
-are used to orchestrate the linkage pipeline. A targets pipeline is a
-structured way of specifying a directed acyclic graph that governs how
-inputs, intermediate steps, and outputs all interact/flow into each
-other. The pipeline can identify changes in the code and inputs for a
-particular step and propagate the need to update to downstream steps.
-Via some partner packages (e.g. <code>crew</code>), a targets pipeline
-can be computed in parallel fairly easily as the full dependency chain
-is pre-specified.</li>
-<li><code>data.table</code>, <code>duckdb</code> (R-package, overall
-reference): Most of the data manipulation within this pipeline is either
-conducted via the <code>data.table</code> R-package or
+<li><a href="https://books.ropensci.org/targets/">targets</a> and <a href="https://docs.ropensci.org/tarchetypes/"><code>tarchetypes</code></a>:
+These R-packages are used to orchestrate the linkage pipeline. A targets
+pipeline is a directed acyclic graph that governs how inputs,
+intermediate steps, and outputs all interact/flow into each other. The
+pipeline can identify changes in the code and inputs for a particular
+step and propagate the need to update to downstream steps. Via some
+partner packages (e.g. <a href="https://github.com/wlandau/crew"><code>crew</code></a>), a targets
+pipeline can be computed in parallel fairly easily as the full
+dependency chain is pre-specified.</li>
+<li><a href="https://github.com/Rdatatable/data.table"><code>data.table</code></a>,
+<a href="https://github.com/duckdb/duckdb-r">duckdb</a> (R-package,
+overall reference): Most of the data manipulation within this pipeline
+is either conducted via the <code>data.table</code> R-package or
 <code>duckdb</code> dialect sql (via the <code>DBI</code>) package. The
-<code>glue</code> package is often used to craft sql statements.</li>
-<li><code>.parquet</code> files: The <code>arrow</code> package (along
-with <code>duckdb</code>) provides read/write routines for
+<a href="https://glue.tidyverse.org/"><code>glue</code></a> package is
+often used to craft sql statements.</li>
+<li><code>.parquet</code> files: The <a href="https://arrow.apache.org/docs/r/"><code>arrow</code></a> package
+(along with <code>duckdb</code>) provides read/write routines for
 <code>.parquet</code> files. <code>.parquet</code> files are used
 because they are reasonably efficient storage wise and allow for partial
 read/writes. <code>DuckDB</code> in particular has effective routines
 for reading/manipulating <code>.parquet</code> files.</li>
-<li><code>tidymodels</code>: This example (and the <code>hyrule</code>
-package) relies on the <code>tidymodels</code> suite of packages for
-model specification, fitting, and evaluation. The main packages used are
-<code>parnsip</code>, <code>workflows</code>, <code>tune</code>,
-<code>stacks</code>, and <code>yardstick</code>.</li>
-<li><em>machine learning</em>: This example uses <code>xgboost</code>
-gradient boosted machines, <code>ranger</code> random forests, and
-<code>kernlab</code> support vector machines.</li>
-<li><em>stacking</em>: This method uses stacked generalization (aka
-stacking) for model ensembling. The <code>stacks</code> package provides
-the implementation.</li>
-<li><code>igraph</code>: A package for working with
-networks/graphs.</li>
-<li><em>string distance metrics</em>: Many of the character variable
-based comparisons (e.g. name similarity) are string distance metrics.
-More details can be found here. Implementation is done via
-<code>DuckDB</code> routines.</li>
+<li><a href="https://www.tidymodels.org/"><code>tidymodels</code></a>:
+This example (and the <code>hyrule</code> package) relies on the
+<code>tidymodels</code> suite of packages for model specification,
+fitting, and evaluation. The main packages used are <a href="https://parsnip.tidymodels.org/"><code>parnsip</code></a>, <a href="https://workflows.tidymodels.org/"><code>workflows</code></a>, <a href="https://tune.tidymodels.org/"><code>tune</code></a>, <a href="https://stacks.tidymodels.org/"><code>stacks</code></a>, and <a href="https://yardstick.tidymodels.org/"><code>yardstick</code></a>.</li>
+<li><em>machine learning</em>: This example uses <a href="https://xgboost.readthedocs.io/en/stable/R-package/xgboostPresentation.html"><code>xgboost</code></a>
+gradient boosted machines, <a href="https://github.com/imbs-hl/ranger"><code>ranger</code></a> random
+forests, and <a href="https://cran.r-project.org/web/packages/kernlab/kernlab.pdf"><code>kernlab</code></a>
+support vector machines.</li>
+<li><a href="https://en.wikipedia.org/wiki/Ensemble_learning"><em>stacking/ensemble
+learning</em></a>: This method uses stacked generalization (aka
+stacking) for model ensembling. The <a href="https://stacks.tidymodels.org/"><code>stacks</code></a> package
+provides the implementation.</li>
+<li><a href="https://en.wikipedia.org/wiki/Ensemble_learning"><code>igraph</code></a>:
+A package for working with networks/graphs. Collections of 1:1 matches
+may aggregate into full-fledged networks and can be analyzed as
+such.</li>
+<li><a href="https://journal.r-project.org/archive/2014-1/loo.pdf"><em>string
+distance metrics</em></a>: Many of the character variable based
+comparisons (e.g. name similarity) are string distance metrics. More
+details can be found here. Implementation is done via <a href="https://duckdb.org/docs/sql/functions/char.html"><code>DuckDB</code></a>
+routines.</li>
 </ol>
 </div>
 <div id="machines-vs.-probabilistic-methods" class="section level3">
@@ -522,9 +524,17 @@ More details can be found here. Implementation is done via
 <div id="glossary" class="section level3">
 <h3>Glossary</h3>
 <ol style="list-style-type: decimal">
-<li>Source id and source system</li>
-<li>hash id</li>
-<li></li>
+<li><p>Source system (<code>source_system</code>): A dataset</p></li>
+<li><p>Source Id (<code>source_id</code>): The unique record identifier
+within a source system. Within a source system, all records with the
+same source id are considered a single entity.</p></li>
+<li><p>hash id (<code>clean_hash</code>): A custom generated unique
+identifier that is nested within a source system and source id that
+specifies a specific set of identifiers. For example, Dan will result in
+a different hash id than Daniel, even with all the other inputs held the
+same. The hash id serves as the base unit of analysis for the matching
+(that is, the matches are between hash ids). Things are later aggregated
+to the source system - source id level</p></li>
 </ol>
 </div>
 </div>
@@ -536,7 +546,7 @@ More details can be found here. Implementation is done via
 <h1>Set up</h1>
 <div id="pipeline-setup" class="section level2">
 <h2>Pipeline setup</h2>
-<p>These packages are required to set up the pipeline</p>
+<p>These packages are required to set up the pipeline.</p>
 <pre class="r"><code>library(targets)
 library(&#39;hyrule&#39;)
 library(tarchetypes)
@@ -547,12 +557,19 @@ library(&#39;data.table&#39;)</code></pre>
 <p>Remove the <code>_targets_r</code> directory previously written by
 non-interactive runs of the report.</p>
 <pre class="r"><code>tar_unscript()</code></pre>
-</div>
-<div id="packages-and-functions" class="section level2">
-<h2>Packages and functions</h2>
-<p>These packages and functions are required to run the pipeline (and
-not just set it up).</p>
-<pre class="r"><code>tar_option_set(
+<pre class="r"><code>getwd()
+#&gt; [1] &quot;C:/Users/DCASEY.KC/code/hyrule/example_workflow&quot;
+targets::tar_config_get(&quot;script&quot;)
+#&gt; [1] &quot;_targets.R&quot;</code></pre>
+<p>```{mermaid}</p>
+<pre><code>
+## Packages and functions
+
+These packages and functions are required to have the pipeline run.
+
+
+``` r
+tar_option_set(
   packages = c(&#39;data.table&#39;, &#39;hyrule&#39;, &#39;stringr&#39;, &#39;arrow&#39;, &#39;duckdb&#39;, &#39;DBI&#39;, &#39;glue&#39;, &#39;stringr&#39;, &#39;sf&#39;, &#39;tidymodels&#39;, &#39;workflows&#39;, &#39;stacks&#39;, &#39;dplyr&#39;, &#39;ranger&#39;, &#39;xgboost&#39;, &#39;rlang&#39;, &#39;igraph&#39;)
 )
 
@@ -583,6 +600,8 @@ the blocking step, and in this example, largely depends on a
 <li>De-duplicate (and link): One or more datasets are appended together
 and within and between dataset linkages are computed.</li>
 </ol>
+<p>Determining on what type of approach to take occurs during the
+blocking step (which determines the pairs to be evaluated).</p>
 <div id="an-aside-on-types-of-identifiers" class="section level3">
 <h3>An aside on types of identifiers</h3>
 <p>For this workflow, identifiers and other variables come in a few main
@@ -607,14 +626,13 @@ possibility of being a twin, etc.</li>
 <p>In the code below, the <code>tarchetypes::tar_files_input</code>
 ingests the file path of the supplied data files and makes a checkpoint
 on the file – beginning the dependency chain</p>
-<p>The <code>init_data</code> function loads the data passed via the
-<code>input</code> argument and uses some hyrule functions to do common
-cleaning routines (in a somewhat opinionated manner). In this case, the
-two input datasets (<code>input_1</code> and <code>input_2</code>) are
-appended together (via <code>arrow::read_parquet</code> within the
-<code>init_data</code> function) and processed at the same time because
-the rest of the process assumes one “data” file/table with a
-<code>source_system</code> column that differentiates between the data
+<p>The <a href="R/init_data.R"><code>init_data</code></a> function loads
+the data passed via the <code>input</code> argument and uses some hyrule
+functions to do common cleaning routines (in a somewhat opinionated
+manner). In this case, the two input datasets (<code>input_1</code> and
+<code>input_2</code>) are appended together and processed at the same
+time because the rest of the process assumes one “data” file/table with
+a <code>source_system</code> column that differentiates between the data
 specified by <code>input_1</code> versus <code>input_2</code>.</p>
 <pre class="r"><code>list(
   # file paths to data
@@ -630,10 +648,10 @@ specified by <code>input_1</code> versus <code>input_2</code>.</p>
 <p>Within the <code>init_data</code> function, the following steps
 occur:</p>
 <ol style="list-style-type: decimal">
-<li>Via <code>hyrule::clean_names</code>, name columns are stripped of
-non-character values and common prefixes/suffixes are removed.
-<code>hyrule::remove_spaces</code> then removes any white space
-characters.</li>
+<li>Via <a href="../R/utilities.R"><code>hyrule::clean_names</code></a>,
+name columns are stripped of non-character values and common
+prefixes/suffixes are removed. <a href="../R/utilities.R"><code>hyrule::remove_spaces</code></a> then
+removes any white space characters.</li>
 <li>Date of birth is converted into a date format and restricted to be
 from 1901 to the current year.</li>
 <li>Sex is converted into a standard character column ( e.g. ‘Male’ and
@@ -673,6 +691,223 @@ links to identify more matches.</p>
 <p>Handling the data in this way (row based) instead of aggregating
 thing into list-columns and using set operations also improves
 computational efficiency – especially for blocking.</p>
+<pre class="r"><code>before = setDT(arrow::read_parquet(tar_read(input_1)))
+knitr::kable(head(before))</code></pre>
+<table>
+<colgroup>
+<col width="9%" />
+<col width="11%" />
+<col width="6%" />
+<col width="7%" />
+<col width="10%" />
+<col width="11%" />
+<col width="4%" />
+<col width="9%" />
+<col width="8%" />
+<col width="2%" />
+<col width="2%" />
+<col width="6%" />
+<col width="9%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">street_number</th>
+<th align="left">street_name</th>
+<th align="left">source_id</th>
+<th align="left">first_name</th>
+<th align="left">middle_initial</th>
+<th align="left">last_name</th>
+<th align="left">sex</th>
+<th align="left">date_of_birth</th>
+<th align="left">unit_number</th>
+<th align="right">X</th>
+<th align="right">Y</th>
+<th align="left">zip_code</th>
+<th align="left">source_system</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">NA</td>
+<td align="left">NA</td>
+<td align="left">0_9431</td>
+<td align="left">Denise</td>
+<td align="left">H</td>
+<td align="left">Rogers</td>
+<td align="left">NA</td>
+<td align="left">09/28/1986</td>
+<td align="left">NA</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">NA</td>
+<td align="left">System 1</td>
+</tr>
+<tr class="even">
+<td align="left">NA</td>
+<td align="left">NA</td>
+<td align="left">0_5728</td>
+<td align="left">Shaneka</td>
+<td align="left">T</td>
+<td align="left">Pullins</td>
+<td align="left">Female</td>
+<td align="left">10/15/1977</td>
+<td align="left">NA</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">NA</td>
+<td align="left">System 1</td>
+</tr>
+<tr class="odd">
+<td align="left">NA</td>
+<td align="left">NA</td>
+<td align="left">0_11287</td>
+<td align="left">Laila</td>
+<td align="left">M</td>
+<td align="left">Garrett</td>
+<td align="left">Female</td>
+<td align="left">01/01/1990</td>
+<td align="left">NA</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">NA</td>
+<td align="left">System 1</td>
+</tr>
+<tr class="even">
+<td align="left">NA</td>
+<td align="left">1st avenue south</td>
+<td align="left">0_8875</td>
+<td align="left">Tara</td>
+<td align="left">S</td>
+<td align="left">Lacroix</td>
+<td align="left">Female</td>
+<td align="left">05/12/1991</td>
+<td align="left">NA</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">NA</td>
+<td align="left">System 1</td>
+</tr>
+<tr class="odd">
+<td align="left">NA</td>
+<td align="left">1st avenue south</td>
+<td align="left">0_11866</td>
+<td align="left">Angela</td>
+<td align="left">S</td>
+<td align="left">Hampton</td>
+<td align="left">Female</td>
+<td align="left">10/10/1993</td>
+<td align="left">NA</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">NA</td>
+<td align="left">System 1</td>
+</tr>
+<tr class="even">
+<td align="left">NA</td>
+<td align="left">25th st e</td>
+<td align="left">0_11139</td>
+<td align="left">Cassandra</td>
+<td align="left">C</td>
+<td align="left">Man Of The House</td>
+<td align="left">Female</td>
+<td align="left">07/09/1957</td>
+<td align="left">NA</td>
+<td align="right">NA</td>
+<td align="right">NA</td>
+<td align="left">NA</td>
+<td align="left">System 1</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>
+after = setDT(arrow::read_parquet(tar_read(data)))
+knitr::kable(head(after))</code></pre>
+<table>
+<colgroup>
+<col width="10%" />
+<col width="7%" />
+<col width="14%" />
+<col width="14%" />
+<col width="13%" />
+<col width="7%" />
+<col width="8%" />
+<col width="24%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">source_system</th>
+<th align="left">source_id</th>
+<th align="left">first_name_noblank</th>
+<th align="left">middle_name_noblank</th>
+<th align="left">last_name_noblank</th>
+<th align="left">sex_clean</th>
+<th align="left">dob_clean</th>
+<th align="left">clean_hash</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">System 1</td>
+<td align="left">0_100</td>
+<td align="left">EVA</td>
+<td align="left">P</td>
+<td align="left">MCMILLON</td>
+<td align="left">F</td>
+<td align="left">1943-12-08</td>
+<td align="left">62fe05da67ded8f2bea61c5a2ae1d5b4</td>
+</tr>
+<tr class="even">
+<td align="left">System 1</td>
+<td align="left">0_10000</td>
+<td align="left">ERIC</td>
+<td align="left">J</td>
+<td align="left">PERES</td>
+<td align="left">M</td>
+<td align="left">1972-02-15</td>
+<td align="left">4de711d441888ae9aecc58c1f3d5b98c</td>
+</tr>
+<tr class="odd">
+<td align="left">System 2</td>
+<td align="left">0_10001</td>
+<td align="left">AMANDA</td>
+<td align="left">NA</td>
+<td align="left">PEREZ</td>
+<td align="left">F</td>
+<td align="left">1982-07-10</td>
+<td align="left">de38b20096bdec032fe5ac12e7fe3488</td>
+</tr>
+<tr class="even">
+<td align="left">System 2</td>
+<td align="left">0_10002</td>
+<td align="left">AKBERTO</td>
+<td align="left">K</td>
+<td align="left">PEREZ</td>
+<td align="left">M</td>
+<td align="left">2006-08-02</td>
+<td align="left">656663bf9b773bc1df222a54dde09993</td>
+</tr>
+<tr class="odd">
+<td align="left">System 2</td>
+<td align="left">0_10003</td>
+<td align="left">FELICIA</td>
+<td align="left">L</td>
+<td align="left">LADYOFTHEHOUSE</td>
+<td align="left">F</td>
+<td align="left">1971-03-08</td>
+<td align="left">faf768bdf6136246e2909f47ecd5d979</td>
+</tr>
+<tr class="even">
+<td align="left">System 1</td>
+<td align="left">0_10004</td>
+<td align="left">MISS</td>
+<td align="left">L</td>
+<td align="left">ENNIS</td>
+<td align="left">M</td>
+<td align="left">1973-05-31</td>
+<td align="left">61052dbd3e94d0da0cefb0a0d2f230cf</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 <div id="secondary-identifiers" class="section level3">
@@ -680,11 +915,10 @@ computational efficiency – especially for blocking.</p>
 <p>Secondary identifiers are primarily variables not included within the
 id hash and/or ones that will not be used for blocking. These variables
 are also more likely to change over time and/or have higher levels of
-missingness. Common examples include addresses and ZIP code. Unlike the
-primary identifiers, these data are treated as list
-columns/sets/histories (e.g. does the address history for record A
-overlap with that of record B) and are kept at the source id level (at
-least in this document).</p>
+missingness. Common examples include <a href="R/create_history_variable.R">addresses</a> and <a href="R/create_history_variable.R">ZIP code</a>. Unlike the primary
+identifiers, these data are treated as list columns/sets/histories
+(e.g. does the address history for record A overlap with that of record
+B) and are kept at the source id level (at least in this document).</p>
 <p>Note: The sample data used in this document only has one (or zero)
 addresses associated with each source id. However, the “history”
 approach to data transformation and analysis is used for demonstration
@@ -722,6 +956,13 @@ histories and a one entry history is legitimate in any case.</p>
 </div>
 <div id="contextual-variables" class="section level3">
 <h3>Contextual variables</h3>
+<p>Frequency variables are useful to include within the modelling
+framework as they can adjust/downweight common names. For example, John
+Smith and John Smith likely is less informative than Unique Name and
+Unique Name because John Smith is more common. Using the <a href="R/create_frequency_table.R"><code>create_frequency_table</code></a>
+function, any variable can be the source of a frequency variable. For a
+given input value (e.g. John), the resulting relative frequency value
+computed and then scaled between 0 and 1.</p>
 <pre class="r"><code>list(
   # Create frequency tables
   tar_target(
@@ -735,10 +976,12 @@ histories and a one entry history is legitimate in any case.</p>
 )
 #&gt; Establish _targets.R and _targets_r/targets/context-variables.R.</code></pre>
 </div>
-<div id="musings-on-how-to-clean-data" class="section level3">
-<h3>Musings on how to clean data</h3>
-<p>[Reproduce the list I sent Abie a while ago]</p>
-<p>[John Doe]</p>
+<div id="other-data-cleaning-ideas" class="section level3">
+<h3>Other data cleaning ideas</h3>
+<ol style="list-style-type: decimal">
+<li>In real data, there are common “junk” names – e.g. John Doe. These
+should be removed</li>
+</ol>
 </div>
 </div>
 <div id="training-data" class="section level2">
@@ -757,13 +1000,41 @@ options are available:</p>
 </div>
 <div id="prepping-training-data-for-this-workflow" class="section level3">
 <h3>Prepping training data for this workflow</h3>
-<p>The <code>pairs</code> dataset within hyrule is at the source id
-rather than the hash level. This next target/block of code converts from
-source id to hash id. Generally, this step will not be required as the
-training data will be natively at the hash level. Additionally, most
-users will have their training pairs stored in a database and/or as a
-set of loadable files (e.g. csv) that can be read in with
-<code>tarchetypes::tar_files_input</code>.</p>
+<p>The <code>pairs</code> dataset within <code>hyrule</code> is at the
+source id rather than the hash level. This next target/block of code
+converts from source id to hash id. Generally, this step will not be
+required as the training data will be natively at the hash level.
+Additionally, most users will have their training pairs stored in a
+database and/or as a set of loadable files (e.g. csv) that can be read
+in with <code>tarchetypes::tar_files_input</code>.</p>
+<p>Minimally, labeled pairs (e.g. training data) should be stored in the
+following format:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="right">id1</th>
+<th align="right">id2</th>
+<th align="right">pair</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">1</td>
+<td align="right">3</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="right">2</td>
+<td align="right">4</td>
+<td align="right">1</td>
+</tr>
+</tbody>
+</table>
+<p><code>id1</code>, <code>id2</code>, and <code>pair</code> are all
+required columns. <code>pair</code> must be a numeric column with the
+values of 0 (no-match), 1 (match), or -1 (unknown). Additional columns
+can be added to the dataset, but they will be unused by the current
+implementation.</p>
 <pre class="r"><code>list(
   # Note: This step is mostly just so the example(s) can run
   tar_target(train_input,
@@ -829,7 +1100,7 @@ spatio-temporal).</li>
 <div id="creating-the-variables" class="section level3">
 <h3>Creating the variables</h3>
 <p>To create the variables specified by the formula, this workflow uses
-a function called <code>make_model_frame</code>.
+a function called <a href="R/make_model_frame.R"><code>make_model_frame</code></a>.
 <code>make_model_frame</code> takes a number of inputs (datasets, the
 training pairs, frequency tables, etc.) and computes the required
 columns from the data. The actual computation is handled in a temporary
@@ -843,15 +1114,16 @@ optimizing queries.</p>
 <h4>Load and prepare training data</h4>
 <p>At this stage, the <code>train_input</code> step is a basic
 data.frame (technically a file path to a data.frame) with three columns:
-<code>id1</code>, <code>id2</code>, and <code>pair</code>. The first two
-columns specify pairs of records while the <code>pair</code> column is a
-binary flag indicating whether the two (hash) ids are a match (1) or not
-(0). To be usable for model fitting, the training pairs must be screened
-for duplicates, contradictions (e.g. the first wave of training data
-says A !=B while the second set says A = B) must be reconciled, and the
-ids must be checked for validity (e.g. the input data might have changed
-the hash for a particular row so that a given pair in the training data
-doesn’t have a counterpart in the main data).</p>
+<code>id1</code>, <code>id2</code>, and <code>pair</code>. As described
+above, the first two columns specify pairs of records while the
+<code>pair</code> column is a binary flag indicating whether the two
+(hash) ids are a match (1) or not (0). To be usable for model fitting,
+the training pairs must be screened for duplicates, contradictions
+(e.g. the first wave of training data says A !=B while the second set
+says A = B) must be reconciled, and the ids must be checked for validity
+(e.g. the input data might have changed the hash for a particular row so
+that a given pair in the training data doesn’t have a counterpart in the
+main data).</p>
 </div>
 <div id="computing-prediction-variables" class="section level4">
 <h4>Computing prediction variables</h4>
@@ -862,7 +1134,7 @@ takes in a few parquet file paths (and/or table specified by
 <code>DBI::Id()</code>) and generates a sql query that when executed in
 the the correct environment will return a data frame containing pair
 level variables.</p>
-<p>For preparing the training data, <code>compile_training_data</code>
+<p>For preparing the training data, <a href="R/compile_training_data.R"><code>compile_training_data</code></a>
 loads and standardizes labeled pairs, uses <code>make_model_frame</code>
 (with the previously created targets as inputs) to go from labeled pairs
 to “training data.” Before saving the results, some sanity checks are
@@ -891,6 +1163,10 @@ list(
 </div>
 <div id="testtrain-split" class="section level3">
 <h3>Test/train split</h3>
+<p>The labeled data is split into two chunks datasets “train” and
+“test.” The training dataset will inform the models that will be fit on
+the later sections while the “test” dataset is held out and will be used
+to generate out of sample fit metrics.</p>
 <pre class="r"><code>list(
   tar_target(
     training_hash,
@@ -911,16 +1187,32 @@ list(
 </div>
 <div id="model-specification" class="section level2">
 <h2>Model specification</h2>
+<p>The linkage model consists of three parts:</p>
+<ol style="list-style-type: decimal">
+<li>A lasso logistic regression that quickly screens out “obvious”
+matches and non-matches</li>
+<li>A diverse series of models that are fit via cross-validation.</li>
+<li>An ensemble model fit on the cross-validated results of the models
+generated in step 2 that makes the final match score.</li>
+</ol>
+<p>Step 1 is used for computation efficiency as logistic regressions
+produce match scores quickly and are good enough to produce ballpark
+estimates. Together, steps 2 and 3 are a “stacking” ensemble model
+approach where a diverse set of models are combined together to produce
+results that are better than a single model.</p>
 <div id="screening-model" class="section level3">
 <h3>Screening model</h3>
 <pre class="r"><code>list(
-  tar_target(screener, command = 
-               fit_screening_model(test_train_split[2], bounds, f))
+  tar_target(screener, 
+  command = fit_screening_model(test_train_split[2], bounds, f))
 )
 #&gt; Establish _targets.R and _targets_r/targets/screener.R.</code></pre>
 </div>
 <div id="submodels" class="section level3">
 <h3>Submodels</h3>
+<p>For an effective ensemble, a variety of model families are employed.
+This example uses tuned versions of support vector machines, random
+forests, and xgboost gradient boosted machines.</p>
 <pre class="r"><code>svm = parsnip::svm_linear(
   mode = &#39;classification&#39;, 
   engine = &#39;kernlab&#39;, 
@@ -950,10 +1242,17 @@ s_params$nm = s_params$NAME
   
 
 #&gt; Establish _targets.R and _targets_r/globals/submodel_specs.R.</code></pre>
+<p>The stacking framework requires the submodels/child models to be fit
+with cross-validation (as a check against over-fitting). As such, the
+training dataset is subdivided into 5 approximately equal sized
+chunks.</p>
 <pre class="r"><code>list(
   tar_target(tfolds, command = make_folds(test_train_split[2], screener))
 )
 #&gt; Establish _targets.R and _targets_r/targets/submod-folds.R.</code></pre>
+<p>The models are tuned via <a href="https://tune.tidymodels.org/reference/tune_bayes.html">bayesian
+hyperparameter tuning</a> and the best performing models are considered
+for inclusion in the ensemble.</p>
 <pre class="r"><code>submods = list(
   tarchetypes::tar_map(
     values = s_params,
@@ -975,6 +1274,8 @@ s_params$nm = s_params$NAME
 </div>
 <div id="stacked-ensemble-model" class="section level3">
 <h3>Stacked ensemble model</h3>
+<p>The submodels are ensembled together via a lasso regression. The
+output model object is also saved.</p>
 <pre class="r"><code>list(
 tarchetypes::tar_combine(
     model,
@@ -998,8 +1299,26 @@ tarchetypes::tar_combine(
 </div>
 <div id="blocking" class="section level2">
 <h2>Blocking</h2>
+<p>Blocking creates the list of pairs to evaluate for match scores. In
+this implementation, a series of sql statements are evaluated and the
+pairs that fit one or more of those conditions are cached for evaluation
+via the linkage model.</p>
 <div id="specifying-blocking-rules-with-sql" class="section level3">
 <h3>Specifying blocking rules with SQL</h3>
+<p>Blocking rules are specified as DuckDB friendly SQL statements and
+refer to a <code>l</code> and a <code>r</code> dataset. In this
+implementation, both <code>l</code> and <code>r</code> are the
+<code>data</code> target. The <code>splink</code> package<a href="https://moj-analytical-services.github.io/splink/demos/tutorials/03_Blocking.html">has
+a great write up on good blocking rules</a> and the approach used in
+this example is heavily influenced by the splink package.</p>
+<p>Three rules are instantiated below:</p>
+<ol style="list-style-type: decimal">
+<li>Exact match on last name</li>
+<li>Exact match on DOB</li>
+<li>Fuzzy match on first name and exact match on year</li>
+</ol>
+<p>For further evaluation, a pair of records must meet at least one of
+the conditions.</p>
 <pre class="r"><code>blocking_rules = c(
   &#39;l.last_name_noblank = r.last_name_noblank&#39;,
   &#39;l.dob_clean = r.dob_clean&#39;,
@@ -1017,6 +1336,13 @@ list(
 </div>
 <div id="computing-and-compiling-pairs-for-evaluation" class="section level3">
 <h3>Computing and compiling pairs for evaluation</h3>
+<p>Once the blocking rules have been properly formatted and prepared,
+they are then computed. The <code>deduplicate</code> argument in the <a href="R/blocking.R"><code>make_block</code></a> function
+(<code>blocks</code> target) governs whether records from the same
+source system are “allowed” to be included in the final set of blocked
+pairs. Records from the same source system with the same source id are
+automatically excluded from final list of evaluation pairs as they will
+be added as fixed links by a later step.</p>
 <pre class="r"><code>list(
 tar_target(blocks, make_block(q = qgrid, 
                               data = data, 
@@ -1032,12 +1358,20 @@ tar_target(bids, compile_blocks(blocks = blocks,
 tar_target(bid_files, bids)
 )
 #&gt; Establish _targets.R and _targets_r/targets/block-2.R.</code></pre>
+<p>At the end of the blocking process, the <code>bid_files</code> target
+links to a series of data.frames (saved as parquet files) that consist
+of the pairs that be assessed for match probability.</p>
 </div>
 </div>
-<div id="predicting-matchiness" class="section level2">
-<h2>Predicting matchiness</h2>
+<div id="predicting-match-scores" class="section level2">
+<h2>Predicting match scores</h2>
 <div id="using-the-ensemble" class="section level3">
 <h3>Using the ensemble</h3>
+<p>For all blocked pairs, a match score is generated and those where the
+match probability is &gt;.05 are saved. As described above, pairs are
+first evaluated by the lasso screening models and those that are within
+the range specified by <code>bounds</code> (default: [.01 - .99]) are
+further evaluated by the overall ensemble.</p>
 <pre class="r"><code>tar_target(preds,
         predict_links(
           pairs = bid_files,
@@ -1057,6 +1391,12 @@ tar_target(bid_files, bids)
 </div>
 <div id="fixed-links" class="section level3">
 <h3>Fixed links</h3>
+<p>Depending on the linkage problem, there may be certain pairs of
+records that must be considered matches, regardless of the match score.
+In this example, records with the same source system and source id, but
+different hash ids are automatically considered matches (they are
+ignored during the blocking step, but added here). The <a href="R/fixed_links.R">fixed_links</a> function adds those records to
+the results set as exact matches (i.e. match score of 1).</p>
 <pre class="r"><code>tar_target(fixed, 
              fixed_links(
                data = data,
@@ -1071,8 +1411,13 @@ tar_target(bid_files, bids)
 </div>
 <div id="evaluation-and-cutoffs" class="section level2">
 <h2>Evaluation and cutoffs</h2>
-<div id="oos-validation" class="section level3">
-<h3>OOS validation</h3>
+<p>The ensemble produces match scores on a scale of 0 to 1. However,
+whether or not two records are a “match” is a binary value and therefore
+the scores must be discretized. To find a good cutoff point, 3 rounds of
+5-fold cross validation are used. For each fold, the entire ensemble is
+refit via <a href="R/cv_refit.R"><code>cv_refit</code></a>(although the
+hyperparameters are inherited from the main model) on 4/5ths of the
+training data, and the cutoff that optimizes accuracy is computed.</p>
 <pre class="r"><code>i = 3
 cutoff_df = data.table::data.table(iter = 1:i, name = as.character(1:i))
 
@@ -1093,9 +1438,11 @@ cutoff_df = data.table::data.table(iter = 1:i, name = as.character(1:i))
   )
 )
 #&gt; Establish _targets.R and _targets_r/targets/b-cutoffs.R.</code></pre>
-</div>
-<div id="identifying-the-cutpoint" class="section level3">
-<h3>Identifying the cutpoint</h3>
+<div id="identifying-the-cutpoint-and-oos-statistics" class="section level3">
+<h3>Identifying the cutpoint and OOS statistics</h3>
+<p>The final cutoff point is averaged over each iteration of the cross
+validation process (the <code>cv_co</code> set of products) via the <a href="R/identify_cutoff.R"><code>identify_cutoff</code></a> function.
+This function also computes the full out of sample (OOS) results.</p>
 <pre class="r"><code>list(
 tarchetypes::tar_combine(
     cutme,
@@ -1118,8 +1465,12 @@ tarchetypes::tar_combine(
 </div>
 <div id="from-11-links-to-networks" class="section level2">
 <h2>From 1:1 links to networks</h2>
-<div id="aggregating-from-hash-ids-to-source-ids" class="section level3">
-<h3>Aggregating from hash ids to source ids</h3>
+<p>Once a set of links at the hash id level have been identified, they
+must be aggregated to the level of interest – in this case, source id.
+This is done by organizing all the individual 1:1 links together into a
+series of networks and aggregating those networks by source id. The <a href="R/compile_links.R"><code>compile_links</code></a> function does
+this two step aggregation process and computes some metrics at each
+scale (e.g. the hash id level and then the source id level).</p>
 <pre class="r"><code>tar_target(components, 
            compile_links(
              preds,
@@ -1130,17 +1481,33 @@ tarchetypes::tar_combine(
              output_folder = outdir
            ), format = &#39;file&#39;)
 #&gt; Establish _targets.R and _targets_r/targets/compile-components.R.</code></pre>
-</div>
 <div id="applying-constraints" class="section level3">
 <h3>Applying constraints</h3>
-<p>E.g. only one death per network</p>
+<p>While this example does not have any network based constraints,
+certain uses cases may require the implementation of deterministic
+rules. For example, when linking death records to other types of
+administrative information, users may want to enforce a rule that only
+one death record may within a network/cluster of linkages (otherwise, it
+would imply the “person” represented by the collection of records died
+twice). The implementation of those sorts of rules is probably best done
+as part of the <code>complile_links</code> function (or as a new
+subsequent step).</p>
 </div>
-<div id="create-identity-table" class="section level3">
-<h3>Create identity table</h3>
+<div id="identity-table" class="section level3">
+<h3>Identity Table</h3>
+<p>The first part of results stored in <code>components</code> target is
+a file path to a parquet file containing the final results: a data frame
+that crosswalks between <code>clean_hash</code>, <code>source_id</code>
+&amp; <code>source_system</code>, and <code>final_comp_id</code>. This
+latter variable is final entity identity. All source ids with the same
+<code>final_comp_id</code> can be considered as representing the same
+“person” (or equivalent).</p>
+<p>As currently implemented, the <code>final_comp_id</code>s are not
+persistent between model versions.</p>
 </div>
 </div>
-<div id="did-is-work" class="section level2">
-<h2>Did is work?</h2>
+<div id="did-it-work" class="section level2">
+<h2>Did it work?</h2>
 <div id="assessing-the-evaluation-metrics" class="section level3">
 <h3>Assessing the evaluation metrics</h3>
 </div>

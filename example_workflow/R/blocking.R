@@ -3,11 +3,11 @@
 make_block_rules = function(rules){
   ddb = DBI::dbConnect(duckdb::duckdb())
   loadspatial(ddb)
-  
+
   # Validate the rules
   stopifnot(is.character(rules))
 
-  
+
   # Identify the complex rules
   cplex_funcs = c('contains', 'jaccard', 'jaro', 'st_distance')
   cplex = lapply(cplex_funcs, function(r){
@@ -15,32 +15,32 @@ make_block_rules = function(rules){
   })
   cplex = unique(unlist(cplex))
   simple = rules[-cplex]
-  
+
   rules = data.frame(rrr = c(simple, rules[cplex]), type = 'base')
-  
+
   simple = paste0('coalesce((', simple, '), false)')
   subsetter = paste(simple, collapse = ' OR ')
   subsetter =  paste0('AND NOT (', subsetter, ')')
-  
+
   match_rules = list(rules)
-  
+
   grids = lapply(match_rules, function(y) setnames(y, setdiff(names(y), 'type'), letters[seq_len(ncol(y)-1)]))
   grids = rbindlist(grids, fill = T)
-  
+
   grids[, qid := .I]
   grids = melt(grids, c('qid', 'type'))
   grids = grids[!is.na(value)]
-  
+
   qgrid = grids[, glue::glue_sql_collapse(value, sep = ' AND '), .(qid,type)]
   qgrid[, V1:= glue_sql('({V1})', .con = con)]
-  
+
   qgrid[, where := SQL('')]
   for(cp in cplex_funcs){
     qgrid[grep(cp, tolower(V1)), where := DBI::SQL(subsetter)]
-    
+
   }
-  
-  
+
+
   qgrid
 }
 
@@ -54,11 +54,11 @@ make_block = function(q, data, id_col, deduplicate = TRUE, output_folder){
   stopifnot(file.exists(data))
   stopifnot(tools::file_ext(data) == 'parquet')
   ddb = DBI::dbConnect(duckdb::duckdb())
-  
+
   qry = q$V1
   i = q$qid
   whr = q$where
-  
+
   if(grepl('st_', qry,fixed = T)) loadspatial(ddb)
   if(!deduplicate){
     dedup = SQL('and l.source_system != r.source_system')
@@ -66,15 +66,15 @@ make_block = function(q, data, id_col, deduplicate = TRUE, output_folder){
     dedup = SQL('')
   }
   stopifnot(length(i) == 1)
-  
+
   # load identities
   # a = load_parquet_to_ddb_table(ddb, identities, DBI::Id(table = 'ems'))
-  # 
+  #
   ltab = data
   rtab = data
   lid = DBI::Id(schema = 'l', column = paste0(id_col))
   rid = DBI::Id(schema = 'r', column = paste0(id_col))
-  
+
   output = file.path(output_folder, paste0('qry_',i,'.parquet'))
   r <- glue::glue_sql("
     copy (
@@ -85,31 +85,31 @@ make_block = function(q, data, id_col, deduplicate = TRUE, output_folder){
       r.source_system as ss2,
       {i} as qid
       from {`ltab`} as l
-      inner join {`rtab`} as r 
+      inner join {`rtab`} as r
       on {qry}
-      where 
-      1 = 1 
-      and l.source_id != r.source_id
+      where
+      1 = 1
+      and (concat(l.source_system, l.source_id) != concat(r.source_system, r.source_id))
       and {`lid`} < {`rid`}
       {dedup}
       {whr}
       order by 1
     ) TO {output} (FORMAT 'parquet');
-    
+
   ", .con = ddb)
-  
+
   e = dbExecute(ddb, r)
-  
+
   return(output)
-  
-  
+
+
 }
 #' Compile the rows to evaluate for matchiness
-#' @param blocks 
+#' @param blocks
 compile_blocks = function(blocks, output_folder, chk_size = 1000000){
   ddb = DBI::dbConnect(duckdb::duckdb())
   on.exit(DBI::dbDisconnect(ddb, shutdown = TRUE))
-  
+
   target = DBI::Id(table = paste0('blocks'))
 
   # Add the rows
@@ -118,7 +118,7 @@ compile_blocks = function(blocks, output_folder, chk_size = 1000000){
                       select distinct id1, id2, ss1, ss2 from read_parquet([{p_files}])
                       ', .con = ddb)
   DBI::dbExecute(ddb, pq)
-  
+
   # overall row ID for blocks
   dbExecute(
     ddb,
@@ -131,7 +131,7 @@ compile_blocks = function(blocks, output_folder, chk_size = 1000000){
       .con = ddb
     )
   )
-  
+
   minmax = dbGetQuery(ddb, 'select max(bid) as mx, min(bid) as mn from blocks')
   sss = seq(minmax$mn, minmax$mx, chk_size)
   outfiles = c()
