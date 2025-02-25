@@ -71,6 +71,12 @@ targets::tar_config_get("script")
 
 ```
 
+```{r, echo = False, include = F}
+# Run the pipeline to start
+targets::tar_make()
+```
+
+
 ## Packages and functions
 
 These packages and functions are required to have the pipeline run.
