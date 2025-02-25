@@ -95,7 +95,13 @@ bounds = c(.01, .99)
 # ML Record Linkage Pipeline
 
 ```{r, results = "asis", echo = FALSE}
-cat(c("```{mermaid}", targets::tar_mermaid(T), "```"), sep = "\n")
+cat(c("```{mermaid}", tar_mermaid(T, names = 'components'), "```"), sep = "\n")
+```
+
+
+```{r}
+writeLines(tar_mermaid(T), 'tm_true.txt')
+writeLines(tar_mermaid(F), 'tm_false.txt')
 ```
 
 
