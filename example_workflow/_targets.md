@@ -143,7 +143,7 @@ These packages are required to set up the pipeline.
 
 ``` r
 library(targets)
-library('hyrule')
+# library('hyrule')
 library(tarchetypes)
 library(glue)
 library('sf')

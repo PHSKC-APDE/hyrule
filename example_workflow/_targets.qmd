@@ -65,7 +65,7 @@ These packages are required to set up the pipeline.
 
 ```{r libload}
 library(targets)
-library('hyrule')
+# library('hyrule')
 library(tarchetypes)
 library(glue)
 library('sf')
