@@ -28,7 +28,6 @@ Packages to setup the pipeline
 
 ``` r
 install.packages(c('remotes', 'tarchetypes', 'targets', 'glue', 'sf', 'data.table'))
-remotes::install_github('PHSKC-APDE/hyrule')
 ```
 
 Packages required for the pipeline
