@@ -145,8 +145,7 @@ library(targets)
 # library('hyrule')
 library(tarchetypes)
 library(glue)
-library('sf')
-#> Linking to GEOS 3.12.2, GDAL 3.9.3, PROJ 9.4.1; sf_use_s2() is TRUE
+# library('sf')
 library('data.table')
 ```
 

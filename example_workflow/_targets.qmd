@@ -68,7 +68,7 @@ library(targets)
 # library('hyrule')
 library(tarchetypes)
 library(glue)
-library('sf')
+# library('sf')
 library('data.table')
 ```
 
