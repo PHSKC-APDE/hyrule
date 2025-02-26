@@ -3,53 +3,19 @@
 
 - [Overview](#overview)
   - [About this document](#about-this-document)
-    - [Useful Concepts](#useful-concepts)
-    - [Machines vs. probabilistic
-      methods](#machines-vs-probabilistic-methods)
-    - [Code Location](#code-location)
-    - [Glossary](#glossary)
 - [Workflow Summary](#workflow-summary)
 - [Set up](#set-up)
   - [Pipeline setup](#pipeline-setup)
   - [Packages and functions](#packages-and-functions)
 - [ML Record Linkage Pipeline](#ml-record-linkage-pipeline)
   - [Prepare Data](#prepare-data)
-    - [An aside on types of
-      identifiers](#an-aside-on-types-of-identifiers)
-    - [Primary Identifiers](#primary-identifiers)
-    - [Secondary identifiers](#secondary-identifiers)
-    - [Contextual variables](#contextual-variables)
-    - [Other data cleaning ideas](#other-data-cleaning-ideas)
   - [Training data](#training-data)
-    - [Creating (new) training data](#creating-new-training-data)
-    - [Prepping training data for this
-      workflow](#prepping-training-data-for-this-workflow)
-    - [Specifying a formula](#specifying-a-formula)
-    - [Creating the variables](#creating-the-variables)
-    - [Compile training data](#compile-training-data)
-    - [Test/train split](#testtrain-split)
   - [Model specification](#model-specification)
-    - [Screening model](#screening-model)
-    - [Submodels](#submodels)
-    - [Stacked ensemble model](#stacked-ensemble-model)
   - [Blocking](#blocking)
-    - [Specifying blocking rules with
-      SQL](#specifying-blocking-rules-with-sql)
-    - [Computing and compiling pairs for
-      evaluation](#computing-and-compiling-pairs-for-evaluation)
   - [Predicting match scores](#predicting-match-scores)
-    - [Using the ensemble](#using-the-ensemble)
-    - [Fixed links](#fixed-links)
   - [Evaluation and cutoffs](#evaluation-and-cutoffs)
-    - [Identifying the cutpoint and OOS
-      statistics](#identifying-the-cutpoint-and-oos-statistics)
   - [From 1:1 links to networks](#from-11-links-to-networks)
-    - [Applying constraints](#applying-constraints)
-    - [Identity Table](#identity-table)
   - [Did it work?](#did-it-work)
-    - [Assessing the evaluation
-      metrics](#assessing-the-evaluation-metrics)
-    - [Manual evaluation heuristics](#manual-evaluation-heuristics)
 - [Odds and ends](#odds-and-ends)
   - [Porting an old model into new
     data](#porting-an-old-model-into-new-data)
@@ -57,6 +23,19 @@
     principles](#iterative-development-principles)
   - [Opportunities for future
     improvement](#opportunities-for-future-improvement)
+
+Packages to setup the pipeline
+
+``` r
+install.packages(c('remotes', 'tarchetypes', 'targets', 'glue', 'sf', 'data.table'))
+remotes::install_github('PHSKC-APDE/hyrule')
+```
+
+Packages required for the pipeline
+
+``` r
+install.packages(c('data.table', 'stringr', 'arrow', 'duckdb', 'DBI', 'glue', 'stringr', 'sf', 'tidymodels', 'workflows', 'stacks', 'dplyr', 'ranger', 'xgboost', 'rlang', 'igraph'))
+```
 
 # Overview
 
@@ -180,8 +159,6 @@ tar_unscript()
 ```
 
 ``` r
-getwd()
-#> [1] "C:/Users/DCASEY.KC/code/hyrule/example_workflow"
 targets::tar_config_get("script")
 #> [1] "_targets.R"
 ```
@@ -210,13 +187,77 @@ bounds = c(.01, .99)
 
 # ML Record Linkage Pipeline
 
-``` mermaid
-
+``` r
+writeLines(tar_mermaid(F), 'tm_false.txt')
+writeLines(tar_mermaid(T), 'tm_true.txt')
+m = readLines('tm_false.txt')
 ```
 
-``` r
-writeLines(tar_mermaid(T), 'tm_true.txt')
-writeLines(tar_mermaid(F), 'tm_false.txt')
+``` mermaid
+graph LR
+  style Legend fill:#FFFFFF00,stroke:#000000;
+  style Graph fill:#FFFFFF00,stroke:#000000;
+  subgraph Legend
+    direction LR
+    xf1522833a4d242c5([""Up to date""]):::uptodate --- x2db1ec7a48f65a9b([""Outdated""]):::outdated
+    x2db1ec7a48f65a9b([""Outdated""]):::outdated --- xeb2d7cac8a1ce544>""Function""]:::none
+    xeb2d7cac8a1ce544>""Function""]:::none --- xbecb13963f49e50b{{""Object""}}:::none
+  end
+  subgraph Graph
+    direction LR
+    xefefb3a3e737f452>"loadspatial"]:::uptodate --> xa2b6e5d53bc93497>"make_model_frame"]:::uptodate
+    xefefb3a3e737f452>"loadspatial"]:::uptodate --> x2d0cf0660ee06fb9>"make_block"]:::uptodate
+    xefefb3a3e737f452>"loadspatial"]:::uptodate --> xb4788c2528364ee2>"compile_training_data"]:::uptodate
+    xefefb3a3e737f452>"loadspatial"]:::uptodate --> xb102830293ba05f9>"predict_links"]:::uptodate
+    xefefb3a3e737f452>"loadspatial"]:::uptodate --> x2cb514632b6a0c33>"make_block_rules"]:::uptodate
+    xa2b6e5d53bc93497>"make_model_frame"]:::uptodate --> xb4788c2528364ee2>"compile_training_data"]:::uptodate
+    xa2b6e5d53bc93497>"make_model_frame"]:::uptodate --> xb102830293ba05f9>"predict_links"]:::uptodate
+    x9ffbf33be4cd0190>"parquet_to_ddb"]:::uptodate --> x49e0f667ebf29789>"create_frequency_table"]:::uptodate
+    x9ffbf33be4cd0190>"parquet_to_ddb"]:::uptodate --> x1d4398ab1c75a663>"load_parquet_to_ddb_table"]:::uptodate
+    x8f4090117cf7071a>"clean_zip_code"]:::uptodate --> x84e54cf47c0d7f71>"format_zip_centers"]:::uptodate
+    xcb14b35fff3b6271>"fit_submodel"]:::uptodate --> xcb14b35fff3b6271>"fit_submodel"]:::uptodate
+    xd353de774e427124>"init_data"]:::uptodate --> xd353de774e427124>"init_data"]:::uptodate
+    x11484f5aa61f9b0f>"create_history_variable"]:::uptodate --> x11484f5aa61f9b0f>"create_history_variable"]:::uptodate
+    xd5255162a4cb3129>"identify_cutoff"]:::outdated --> xd5255162a4cb3129>"identify_cutoff"]:::outdated
+    xf98f372e086e8f74>"split_tt"]:::uptodate --> xf98f372e086e8f74>"split_tt"]:::uptodate
+    xe50dae2ee0b8ac19>"cv_refit"]:::uptodate --> xe50dae2ee0b8ac19>"cv_refit"]:::uptodate
+    x6e35ee78ad6f95e7{{"outdir"}}:::uptodate --> x6e35ee78ad6f95e7{{"outdir"}}:::uptodate
+    xb26acde22a0a3a7e>"make_folds"]:::uptodate --> xb26acde22a0a3a7e>"make_folds"]:::uptodate
+    x157c37e3c6c668bf>"create_location_history"]:::uptodate --> x157c37e3c6c668bf>"create_location_history"]:::uptodate
+    xc979446847d885b6{{"apply_screen"}}:::uptodate --> xc979446847d885b6{{"apply_screen"}}:::uptodate
+    x6769762fae5ee540{{"bounds"}}:::uptodate --> x6769762fae5ee540{{"bounds"}}:::uptodate
+    x7cf3bbbfdb3130e7>"fixed_links"]:::uptodate --> x7cf3bbbfdb3130e7>"fixed_links"]:::uptodate
+    xfcf37a4bc87e3ace>"create_stacked_model"]:::uptodate --> xfcf37a4bc87e3ace>"create_stacked_model"]:::uptodate
+    xb8ea961e8bb8a366>"combine_cutoffs"]:::outdated --> xb8ea961e8bb8a366>"combine_cutoffs"]:::outdated
+    x83d813b5c4200594>"compile_links"]:::uptodate --> x83d813b5c4200594>"compile_links"]:::uptodate
+    x6fa285a2c241fd66>"convert_sid_to_hid"]:::uptodate --> x6fa285a2c241fd66>"convert_sid_to_hid"]:::uptodate
+    x4c238137f15a9020>"fit_screening_model"]:::uptodate --> x4c238137f15a9020>"fit_screening_model"]:::uptodate
+    x19f80b1ec8be2dfb>"compile_blocks"]:::uptodate --> x19f80b1ec8be2dfb>"compile_blocks"]:::uptodate
+  end
+  classDef uptodate stroke:#000000,color:#ffffff,fill:#354823;
+  classDef outdated stroke:#000000,color:#000000,fill:#78B7C5;
+  classDef none stroke:#000000,color:#000000,fill:#94a4ac;
+  linkStyle 0 stroke-width:0px;
+  linkStyle 1 stroke-width:0px;
+  linkStyle 2 stroke-width:0px;
+  linkStyle 13 stroke-width:0px;
+  linkStyle 14 stroke-width:0px;
+  linkStyle 15 stroke-width:0px;
+  linkStyle 16 stroke-width:0px;
+  linkStyle 17 stroke-width:0px;
+  linkStyle 18 stroke-width:0px;
+  linkStyle 19 stroke-width:0px;
+  linkStyle 20 stroke-width:0px;
+  linkStyle 21 stroke-width:0px;
+  linkStyle 22 stroke-width:0px;
+  linkStyle 23 stroke-width:0px;
+  linkStyle 24 stroke-width:0px;
+  linkStyle 25 stroke-width:0px;
+  linkStyle 26 stroke-width:0px;
+  linkStyle 27 stroke-width:0px;
+  linkStyle 28 stroke-width:0px;
+  linkStyle 29 stroke-width:0px;
+  linkStyle 30 stroke-width:0px;
 ```
 
 ## Prepare Data
@@ -330,34 +371,13 @@ Handling the data in this way (row based) instead of aggregating thing
 into list-columns and using set operations also improves computational
 efficiency – especially for blocking.
 
-``` r
-before = setDT(arrow::read_parquet(tar_read(input_1)))
-knitr::kable(head(before))
-```
+|                          | x                            |
+|:-------------------------|:-----------------------------|
+| input_1_94b857a19c8b8d1a | ../data-raw/fake_one.parquet |
 
-| street_number | street_name | source_id | first_name | middle_initial | last_name | sex | date_of_birth | unit_number | X | Y | zip_code | source_system |
-|:---|:---|:---|:---|:---|:---|:---|:---|:---|---:|---:|:---|:---|
-| NA | NA | 0_9431 | Denise | H | Rogers | NA | 09/28/1986 | NA | NA | NA | NA | System 1 |
-| NA | NA | 0_5728 | Shaneka | T | Pullins | Female | 10/15/1977 | NA | NA | NA | NA | System 1 |
-| NA | NA | 0_11287 | Laila | M | Garrett | Female | 01/01/1990 | NA | NA | NA | NA | System 1 |
-| NA | 1st avenue south | 0_8875 | Tara | S | Lacroix | Female | 05/12/1991 | NA | NA | NA | NA | System 1 |
-| NA | 1st avenue south | 0_11866 | Angela | S | Hampton | Female | 10/10/1993 | NA | NA | NA | NA | System 1 |
-| NA | 25th st e | 0_11139 | Cassandra | C | Man Of The House | Female | 07/09/1957 | NA | NA | NA | NA | System 1 |
-
-``` r
-
-after = setDT(arrow::read_parquet(tar_read(data)))
-knitr::kable(head(after))
-```
-
-| source_system | source_id | first_name_noblank | middle_name_noblank | last_name_noblank | sex_clean | dob_clean | clean_hash |
-|:---|:---|:---|:---|:---|:---|:---|:---|
-| System 1 | 0_100 | EVA | P | MCMILLON | F | 1943-12-08 | 62fe05da67ded8f2bea61c5a2ae1d5b4 |
-| System 1 | 0_10000 | ERIC | J | PERES | M | 1972-02-15 | 4de711d441888ae9aecc58c1f3d5b98c |
-| System 2 | 0_10001 | AMANDA | NA | PEREZ | F | 1982-07-10 | de38b20096bdec032fe5ac12e7fe3488 |
-| System 2 | 0_10002 | AKBERTO | K | PEREZ | M | 2006-08-02 | 656663bf9b773bc1df222a54dde09993 |
-| System 2 | 0_10003 | FELICIA | L | LADYOFTHEHOUSE | F | 1971-03-08 | faf768bdf6136246e2909f47ecd5d979 |
-| System 1 | 0_10004 | MISS | L | ENNIS | M | 1973-05-31 | 61052dbd3e94d0da0cefb0a0d2f230cf |
+| x                    |
+|:---------------------|
+| output//data.parquet |
 
 ### Secondary identifiers
 

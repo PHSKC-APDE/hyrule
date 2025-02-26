@@ -3,7 +3,20 @@ title: "ML Record Linkage"
 format: 
   gfm:
     toc: true
+    toc-depth: 2
 ---
+
+Packages to setup the pipeline
+```{r packages1, eval = FALSE}
+install.packages(c('remotes', 'tarchetypes', 'targets', 'glue', 'sf', 'data.table'))
+remotes::install_github('PHSKC-APDE/hyrule')
+```
+
+Packages required for the pipeline
+```{r packages2, eval = FALSE}
+install.packages(c('data.table', 'stringr', 'arrow', 'duckdb', 'DBI', 'glue', 'stringr', 'sf', 'tidymodels', 'workflows', 'stacks', 'dplyr', 'ranger', 'xgboost', 'rlang', 'igraph'))
+```
+
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
@@ -50,7 +63,7 @@ Users should familiarize themselves with the following R-packages and/or methodo
 
 These packages are required to set up the pipeline.
 
-```{r}
+```{r libload}
 library(targets)
 library('hyrule')
 library(tarchetypes)
@@ -61,19 +74,13 @@ library('data.table')
 
 Remove the `_targets_r` directory previously written by non-interactive runs of the report.
 
-```{r}
+```{r tunscript}
 tar_unscript()
 ```
 
-```{r}
-getwd()
+```{r tconfig}
 targets::tar_config_get("script")
 
-```
-
-```{r, echo = False, include = F}
-# Run the pipeline to start
-targets::tar_make()
 ```
 
 
@@ -100,15 +107,19 @@ bounds = c(.01, .99)
 
 # ML Record Linkage Pipeline
 
-```{r, results = "asis", echo = FALSE}
-cat(c("```{mermaid}", tar_mermaid(T, names = 'components'), "```"), sep = "\n")
-```
-
 
 ```{r}
-writeLines(tar_mermaid(T), 'tm_true.txt')
 writeLines(tar_mermaid(F), 'tm_false.txt')
+writeLines(tar_mermaid(T), 'tm_true.txt')
+m = readLines('tm_false.txt')
 ```
+
+```{r printmermaid, results = "asis", echo = FALSE}
+cat(c("```{mermaid}",m, "```"), sep = "\n")
+```
+
+
+
 
 
 ## Prepare Data
@@ -168,12 +179,18 @@ Practically, using the hash (instead of source id) as the low-level identifier i
 
 Handling the data in this way (row based) instead of aggregating thing into list-columns and using set operations also improves computational efficiency – especially for blocking.
 
-```{r}
-before = setDT(arrow::read_parquet(tar_read(input_1)))
-knitr::kable(head(before))
+```{r, echo = FALSE}
+load_and_kable = function(x){
+  a = try(tar_read_raw(x), silent = TRUE)
+  if(!inherits('try-error', a)){
+    return(knitr::kable(a))
+  }else{
+    knitr::kable(data.frame('Target not found'))
+  }
+}
+load_and_kable('input_1')
 
-after = setDT(arrow::read_parquet(tar_read(data)))
-knitr::kable(head(after))
+load_and_kable('data')
 
 ```
 
