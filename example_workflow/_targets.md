@@ -1,9 +1,8 @@
-# ML Record Linkage
+# ML Record Linkage Pipeline
 
 
 - [Overview](#overview)
   - [About this document](#about-this-document)
-- [Workflow Summary](#workflow-summary)
 - [Set up](#set-up)
   - [Pipeline setup](#pipeline-setup)
   - [Packages and functions](#packages-and-functions)
@@ -15,14 +14,9 @@
   - [Predicting match scores](#predicting-match-scores)
   - [Evaluation and cutoffs](#evaluation-and-cutoffs)
   - [From 1:1 links to networks](#from-11-links-to-networks)
-  - [Did it work?](#did-it-work)
+- [Final Pipeline](#final-pipeline)
 - [Odds and ends](#odds-and-ends)
-  - [Porting an old model into new
-    data](#porting-an-old-model-into-new-data)
-  - [Iterative development
-    principles](#iterative-development-principles)
-  - [Opportunities for future
-    improvement](#opportunities-for-future-improvement)
+  - [Glossary](#glossary)
 
 Packages to setup the pipeline
 
@@ -112,28 +106,6 @@ methodological concepts:
     [`DuckDB`](https://duckdb.org/docs/sql/functions/char.html)
     routines.
 
-### Machines vs. probabilistic methods
-
-### Code Location
-
-### Glossary
-
-1.  Source system (`source_system`): A dataset
-
-2.  Source Id (`source_id`): The unique record identifier within a
-    source system. Within a source system, all records with the same
-    source id are considered a single entity.
-
-3.  hash id (`clean_hash`): A custom generated unique identifier that is
-    nested within a source system and source id that specifies a
-    specific set of identifiers. For example, Dan will result in a
-    different hash id than Daniel, even with all the other inputs held
-    the same. The hash id serves as the base unit of analysis for the
-    matching (that is, the matches are between hash ids). Things are
-    later aggregated to the source system - source id level
-
-# Workflow Summary
-
 # Set up
 
 ## Pipeline setup
@@ -154,11 +126,6 @@ runs of the report.
 
 ``` r
 tar_unscript()
-```
-
-``` r
-targets::tar_config_get("script")
-#> [1] "_targets.R"
 ```
 
 ## Packages and functions
@@ -185,84 +152,9 @@ bounds = c(.01, .99)
 
 # ML Record Linkage Pipeline
 
-``` r
-writeLines(tar_mermaid(F), 'tm_false.txt')
-writeLines(tar_mermaid(T), 'tm_true.txt')
-m = readLines('tm_false.txt')
-```
-
-``` mermaid
-graph LR
-  style Legend fill:#FFFFFF00,stroke:#000000;
-  style Graph fill:#FFFFFF00,stroke:#000000;
-  subgraph Legend
-    direction LR
-    xf1522833a4d242c5([""Up to date""]):::uptodate --- x2db1ec7a48f65a9b([""Outdated""]):::outdated
-    x2db1ec7a48f65a9b([""Outdated""]):::outdated --- xeb2d7cac8a1ce544>""Function""]:::none
-    xeb2d7cac8a1ce544>""Function""]:::none --- xbecb13963f49e50b{{""Object""}}:::none
-  end
-  subgraph Graph
-    direction LR
-    xefefb3a3e737f452>"loadspatial"]:::uptodate --> xa2b6e5d53bc93497>"make_model_frame"]:::uptodate
-    xefefb3a3e737f452>"loadspatial"]:::uptodate --> x2d0cf0660ee06fb9>"make_block"]:::uptodate
-    xefefb3a3e737f452>"loadspatial"]:::uptodate --> xb4788c2528364ee2>"compile_training_data"]:::uptodate
-    xefefb3a3e737f452>"loadspatial"]:::uptodate --> xb102830293ba05f9>"predict_links"]:::uptodate
-    xefefb3a3e737f452>"loadspatial"]:::uptodate --> x2cb514632b6a0c33>"make_block_rules"]:::uptodate
-    xa2b6e5d53bc93497>"make_model_frame"]:::uptodate --> xb4788c2528364ee2>"compile_training_data"]:::uptodate
-    xa2b6e5d53bc93497>"make_model_frame"]:::uptodate --> xb102830293ba05f9>"predict_links"]:::uptodate
-    x9ffbf33be4cd0190>"parquet_to_ddb"]:::uptodate --> x49e0f667ebf29789>"create_frequency_table"]:::uptodate
-    x9ffbf33be4cd0190>"parquet_to_ddb"]:::uptodate --> x1d4398ab1c75a663>"load_parquet_to_ddb_table"]:::uptodate
-    x8f4090117cf7071a>"clean_zip_code"]:::uptodate --> x84e54cf47c0d7f71>"format_zip_centers"]:::uptodate
-    xcb14b35fff3b6271>"fit_submodel"]:::uptodate --> xcb14b35fff3b6271>"fit_submodel"]:::uptodate
-    xd353de774e427124>"init_data"]:::uptodate --> xd353de774e427124>"init_data"]:::uptodate
-    x11484f5aa61f9b0f>"create_history_variable"]:::uptodate --> x11484f5aa61f9b0f>"create_history_variable"]:::uptodate
-    xd5255162a4cb3129>"identify_cutoff"]:::outdated --> xd5255162a4cb3129>"identify_cutoff"]:::outdated
-    xf98f372e086e8f74>"split_tt"]:::uptodate --> xf98f372e086e8f74>"split_tt"]:::uptodate
-    xe50dae2ee0b8ac19>"cv_refit"]:::uptodate --> xe50dae2ee0b8ac19>"cv_refit"]:::uptodate
-    x6e35ee78ad6f95e7{{"outdir"}}:::uptodate --> x6e35ee78ad6f95e7{{"outdir"}}:::uptodate
-    xb26acde22a0a3a7e>"make_folds"]:::uptodate --> xb26acde22a0a3a7e>"make_folds"]:::uptodate
-    x157c37e3c6c668bf>"create_location_history"]:::uptodate --> x157c37e3c6c668bf>"create_location_history"]:::uptodate
-    xc979446847d885b6{{"apply_screen"}}:::uptodate --> xc979446847d885b6{{"apply_screen"}}:::uptodate
-    x6769762fae5ee540{{"bounds"}}:::uptodate --> x6769762fae5ee540{{"bounds"}}:::uptodate
-    x7cf3bbbfdb3130e7>"fixed_links"]:::uptodate --> x7cf3bbbfdb3130e7>"fixed_links"]:::uptodate
-    xfcf37a4bc87e3ace>"create_stacked_model"]:::uptodate --> xfcf37a4bc87e3ace>"create_stacked_model"]:::uptodate
-    xb8ea961e8bb8a366>"combine_cutoffs"]:::outdated --> xb8ea961e8bb8a366>"combine_cutoffs"]:::outdated
-    x83d813b5c4200594>"compile_links"]:::uptodate --> x83d813b5c4200594>"compile_links"]:::uptodate
-    x6fa285a2c241fd66>"convert_sid_to_hid"]:::uptodate --> x6fa285a2c241fd66>"convert_sid_to_hid"]:::uptodate
-    x4c238137f15a9020>"fit_screening_model"]:::uptodate --> x4c238137f15a9020>"fit_screening_model"]:::uptodate
-    x19f80b1ec8be2dfb>"compile_blocks"]:::uptodate --> x19f80b1ec8be2dfb>"compile_blocks"]:::uptodate
-  end
-  classDef uptodate stroke:#000000,color:#ffffff,fill:#354823;
-  classDef outdated stroke:#000000,color:#000000,fill:#78B7C5;
-  classDef none stroke:#000000,color:#000000,fill:#94a4ac;
-  linkStyle 0 stroke-width:0px;
-  linkStyle 1 stroke-width:0px;
-  linkStyle 2 stroke-width:0px;
-  linkStyle 13 stroke-width:0px;
-  linkStyle 14 stroke-width:0px;
-  linkStyle 15 stroke-width:0px;
-  linkStyle 16 stroke-width:0px;
-  linkStyle 17 stroke-width:0px;
-  linkStyle 18 stroke-width:0px;
-  linkStyle 19 stroke-width:0px;
-  linkStyle 20 stroke-width:0px;
-  linkStyle 21 stroke-width:0px;
-  linkStyle 22 stroke-width:0px;
-  linkStyle 23 stroke-width:0px;
-  linkStyle 24 stroke-width:0px;
-  linkStyle 25 stroke-width:0px;
-  linkStyle 26 stroke-width:0px;
-  linkStyle 27 stroke-width:0px;
-  linkStyle 28 stroke-width:0px;
-  linkStyle 29 stroke-width:0px;
-  linkStyle 30 stroke-width:0px;
-```
-
 ## Prepare Data
 
-This section loads, cleans, organizes, and stores data inputs.
-
-There are two main approaches to record linkage:
+There are two main flavors of record linkage supported by this pipeline:
 
 1.  Link only: Data sets are assumed to have no duplicates, and
     therefore within dataset linkages are computed. This is specified
@@ -369,13 +261,27 @@ Handling the data in this way (row based) instead of aggregating thing
 into list-columns and using set operations also improves computational
 efficiency – especially for blocking.
 
-|                          | x                            |
-|:-------------------------|:-----------------------------|
-| input_1_94b857a19c8b8d1a | ../data-raw/fake_one.parquet |
+### Example input data
 
-| x                    |
-|:---------------------|
-| output//data.parquet |
+| street_number | street_name | source_id | first_name | middle_initial | last_name | sex | date_of_birth | unit_number | X | Y | zip_code | source_system |
+|:---|:---|:---|:---|:---|:---|:---|:---|:---|---:|---:|:---|:---|
+| NA | NA | 0_9431 | Denise | H | Rogers | NA | 09/28/1986 | NA | NA | NA | NA | System 1 |
+| NA | NA | 0_5728 | Shaneka | T | Pullins | Female | 10/15/1977 | NA | NA | NA | NA | System 1 |
+| NA | NA | 0_11287 | Laila | M | Garrett | Female | 01/01/1990 | NA | NA | NA | NA | System 1 |
+| NA | 1st avenue south | 0_8875 | Tara | S | Lacroix | Female | 05/12/1991 | NA | NA | NA | NA | System 1 |
+| NA | 1st avenue south | 0_11866 | Angela | S | Hampton | Female | 10/10/1993 | NA | NA | NA | NA | System 1 |
+| NA | 25th st e | 0_11139 | Cassandra | C | Man Of The House | Female | 07/09/1957 | NA | NA | NA | NA | System 1 |
+
+### Example “cleaned” data
+
+| source_system | source_id | first_name_noblank | middle_name_noblank | last_name_noblank | sex_clean | dob_clean | clean_hash |
+|:---|:---|:---|:---|:---|:---|:---|:---|
+| System 1 | 0_100 | EVA | P | MCMILLON | F | 1943-12-08 | 62fe05da67ded8f2bea61c5a2ae1d5b4 |
+| System 1 | 0_10000 | ERIC | J | PERES | M | 1972-02-15 | 4de711d441888ae9aecc58c1f3d5b98c |
+| System 2 | 0_10001 | AMANDA | NA | PEREZ | F | 1982-07-10 | de38b20096bdec032fe5ac12e7fe3488 |
+| System 2 | 0_10002 | AKBERTO | K | PEREZ | M | 2006-08-02 | 656663bf9b773bc1df222a54dde09993 |
+| System 2 | 0_10003 | FELICIA | L | LADYOFTHEHOUSE | F | 1971-03-08 | faf768bdf6136246e2909f47ecd5d979 |
+| System 1 | 0_10004 | MISS | L | ENNIS | M | 1973-05-31 | 61052dbd3e94d0da0cefb0a0d2f230cf |
 
 ### Secondary identifiers
 
@@ -430,9 +336,9 @@ list(
 ### Contextual variables
 
 Frequency variables are useful to include within the modelling framework
-as they can adjust/downweight common names. For example, John Smith and
-John Smith likely is less informative than Unique Name and Unique Name
-because John Smith is more common. Using the
+as they can adjust/downweight common names. For example, “John Smith”
+and “John Smith” likely is less informative than “Unique Name” and
+“Unique Name” because John Smith is more common. Using the
 [`create_frequency_table`](R/create_frequency_table.R) function, any
 variable can be the source of a frequency variable. For a given input
 value (e.g. John), the resulting relative frequency value computed and
@@ -455,21 +361,29 @@ list(
 
 ### Other data cleaning ideas
 
-1.  In real data, there are common “junk” names – e.g. John Doe. These
-    should be removed
+1.  Common “junk” names (e.g. John Doe) should be removed. Reviewing the
+    names with high frequency is generally a good way to find “junk”
+    names.
+2.  Limit date of birth values to reasonable limits (e.g. 1900 - current
+    year).
 
 ## Training data
 
 ### Creating (new) training data
 
 Unlike probabilistic methods (e.g. splink), machine learning methods
-require training data to operate. When beginning a new project, a few
-options are available:
+require training data to operate (although probabilistic methods
+probably require manually labeled pairs to be useful anyway). When
+beginning a new project, a few options are available:
 
 1.  Borrow from a previously fit ML model
 2.  Borrow from a probabilistic model
-3.  Use some deterministic rules
-4.  Randomly sampled pairs, if you are mad
+3.  Use some deterministic rules to generate matches/non-matches
+4.  Randomly sampled manually labeled pairs
+
+Regardless of the approach, the goal is to have enough pairs to fit a
+draft model. The draft model can then be used to generate match scores
+that can inform the selection of additional pairs for manual labeling.
 
 ### Prepping training data for this workflow
 
@@ -720,7 +634,7 @@ list(
 #> Establish _targets.R and _targets_r/targets/submod-folds.R.
 ```
 
-The models are tuned via [bayesian hyperparameter
+The models undergo [bayesian hyperparameter
 tuning](https://tune.tidymodels.org/reference/tune_bayes.html) and the
 best performing models are considered for inclusion in the ensemble.
 
@@ -937,10 +851,11 @@ cv_cutoffs = list(
 
 ### Identifying the cutpoint and OOS statistics
 
-The final cutoff point is averaged over each iteration of the cross
-validation process (the `cv_co` set of products) via the
-[`identify_cutoff`](R/identify_cutoff.R) function. This function also
-computes the full out of sample (OOS) results.
+The cross-validated results are collected and summarized via the
+[`identify_cutoff`](R/identify_cutoff.R) function during the `cutme`
+target. The results are analyzed to determine a cutpoint that maximizes
+accuracy. Out of sample fit statistics are also generated during this
+step.
 
 ``` r
 list(
@@ -962,6 +877,26 @@ tarchetypes::tar_combine(
 )
 #> Establish _targets.R and _targets_r/targets/z-cutoffs.R.
 ```
+
+The resulting `cutme` target contains three items:
+
+1.  A cut-point at the value of maximum accuracy, as computed from the
+    cross validation process (the `cv_co` set of products)
+2.  Summarized cross-validation results (when `Iteration == 0` in the
+    resulting data.frame) and the constituent parts
+3.  Out of sample fit metrics.
+
+Reviewing the results, especially the out of sample fit metrics will
+give a good indication on how the model is performing. An example table
+is reproduced below:
+
+| .metric     | .estimator | .estimate | cut_type |
+|:------------|:-----------|----------:|:---------|
+| accuracy    | binary     | 0.9444444 | Overall  |
+| kap         | binary     | 0.8883144 | Overall  |
+| f_meas      | binary     | 0.9400000 | Overall  |
+| mn_log_loss | binary     | 0.2934539 | Overall  |
+| roc_auc     | binary     | 0.9422345 | Overall  |
 
 ## From 1:1 links to networks
 
@@ -986,6 +921,21 @@ tar_target(components,
 #> Establish _targets.R and _targets_r/targets/compile-components.R.
 ```
 
+The second item in the output of the `components` target is a summary
+file, that reports the density (# of connects/# of total possible
+connections) and size (number of nodes within the cluster). Columns may
+be prefixed with `s#`, where the number refers to the level (each
+increasing level represents a nested subcluster).
+
+| s1_comp_id | s1_density | s1_size | s2_comp_id | s2_density | s2_size | final_comp_id | final_density | final_size |
+|:---|---:|---:|:---|---:|---:|:---|---:|---:|
+| 1 | 0 | 5914 | 1_1 | 0.031 | 94 | 1_1 | 0.031 | 94 |
+| 1 | 0 | 5914 | 1_3 | 0.032 | 95 | 1_3 | 0.032 | 95 |
+| 1 | 0 | 5914 | 1_4 | 0.035 | 69 | 1_4 | 0.035 | 69 |
+| 1 | 0 | 5914 | 1_6 | 0.030 | 75 | 1_6 | 0.030 | 75 |
+| 1 | 0 | 5914 | 1_9 | 0.037 | 62 | 1_9 | 0.037 | 62 |
+| 1 | 0 | 5914 | 1_10 | 0.037 | 105 | 1_10 | 0.037 | 105 |
+
 ### Applying constraints
 
 While this example does not have any network based constraints, certain
@@ -993,9 +943,9 @@ uses cases may require the implementation of deterministic rules. For
 example, when linking death records to other types of administrative
 information, users may want to enforce a rule that only one death record
 may within a network/cluster of linkages (otherwise, it would imply the
-“person” represented by the collection of records died twice). The
-implementation of those sorts of rules is probably best done as part of
-the `complile_links` function (or as a new subsequent step).
+“person” represented by the collection of records died more than once).
+The implementation of those sorts of rules is probably best done as part
+of the `compile_links` function (or as a new subsequent step).
 
 ### Identity Table
 
@@ -1009,22 +959,112 @@ representing the same “person” (or equivalent).
 As currently implemented, the `final_comp_id`s are not persistent
 between model versions.
 
-## Did it work?
+| clean_hash | final_comp_id | source_system | source_id | first_level_id |
+|:---|:---|:---|:---|:---|
+| 62fe05da67ded8f2bea61c5a2ae1d5b4 | 1_1 | System 1 | 0_100 | 1 |
+| 35ee1cc1471040aa3a7188dc1d9e6fef | 1_3 | System 1 | 0_10029 | 1 |
+| 3bccfb77c9dd360d8f4ebdf54b28f595 | 1_3 | System 2 | 0_10029 | 1 |
+| 4a787e1dfee5fb2fbac0fd2c60408f39 | 1_4 | System 1 | 0_10030 | 1 |
+| ae3f5920fcb592cc84f3c31b1b45f328 | 1_4 | System 2 | 0_10030 | 1 |
+| 0f18f44ff69b0710ef001ea0ae69db6b | 1_5 | System 2 | 0_10031 | 1 |
 
-### Assessing the evaluation metrics
+# Final Pipeline
 
-### Manual evaluation heuristics
-
-#### Large low density clusters
-
-#### Twins
-
-#### Multiple people within a source id
+``` mermaid
+graph LR
+  style Legend fill:#FFFFFF00,stroke:#000000;
+  style Graph fill:#FFFFFF00,stroke:#000000;
+  subgraph Legend
+    direction LR
+    xf1522833a4d242c5([""Up to date""]):::uptodate --- xd03d7c7dd2ddda2b([""Stem""]):::none
+    xd03d7c7dd2ddda2b([""Stem""]):::none --- x6f7e04ea3427f824[""Pattern""]:::none
+  end
+  subgraph Graph
+    direction LR
+    x5607a26800187e63(["train_test_data"]):::uptodate --> x33ed306cab814ec5(["training_hash"]):::uptodate
+    xfee8af392695eaee["input_1"]:::uptodate --> x050528f2087f5ab6(["zh"]):::uptodate
+    xe645349da297c10c["input_2"]:::uptodate --> x050528f2087f5ab6(["zh"]):::uptodate
+    x9755545176a05140(["data"]):::uptodate --> x84969cda3107a412["blocks"]:::uptodate
+    x471eae9527634150(["qgrid"]):::uptodate --> x84969cda3107a412["blocks"]:::uptodate
+    xfee8af392695eaee["input_1"]:::uptodate --> x5762811339fd357d(["lh"]):::uptodate
+    xe645349da297c10c["input_2"]:::uptodate --> x5762811339fd357d(["lh"]):::uptodate
+    x71529b40ed4eb343(["cutme"]):::uptodate --> x7a0414717566c114(["cutme_path"]):::uptodate
+    xa65de58f7f180b70(["bid_files"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    x9755545176a05140(["data"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    xa94fb4c0b83ba9a4(["freqs"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    x5762811339fd357d(["lh"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    x050528f2087f5ab6(["zh"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    x9755545176a05140(["data"]):::uptodate --> x5607a26800187e63(["train_test_data"]):::uptodate
+    xa94fb4c0b83ba9a4(["freqs"]):::uptodate --> x5607a26800187e63(["train_test_data"]):::uptodate
+    x5762811339fd357d(["lh"]):::uptodate --> x5607a26800187e63(["train_test_data"]):::uptodate
+    xd7594ee14f5d1b90(["train_input"]):::uptodate --> x5607a26800187e63(["train_test_data"]):::uptodate
+    x050528f2087f5ab6(["zh"]):::uptodate --> x5607a26800187e63(["train_test_data"]):::uptodate
+    x72b796a43fd7d371(["screener"]):::uptodate --> x66e437f53ff04cfe(["submod_svm"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x66e437f53ff04cfe(["submod_svm"]):::uptodate
+    x27b62fd0d7134fa9(["tfolds"]):::uptodate --> x66e437f53ff04cfe(["submod_svm"]):::uptodate
+    x9043e9d6bef6a839(["model"]):::uptodate --> xaccaa1fc5d24385e(["model_path"]):::uptodate
+    x9755545176a05140(["data"]):::uptodate --> xa94fb4c0b83ba9a4(["freqs"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x72b796a43fd7d371(["screener"]):::uptodate
+    x72b796a43fd7d371(["screener"]):::uptodate --> x9043e9d6bef6a839(["model"]):::uptodate
+    x9ac3e268f1e67823(["submod_rf"]):::uptodate --> x9043e9d6bef6a839(["model"]):::uptodate
+    x66e437f53ff04cfe(["submod_svm"]):::uptodate --> x9043e9d6bef6a839(["model"]):::uptodate
+    x0327a91a36b8b78a(["submod_xg"]):::uptodate --> x9043e9d6bef6a839(["model"]):::uptodate
+    x1d906206b5b14e1d(["bids"]):::uptodate --> xa65de58f7f180b70(["bid_files"]):::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> xe829d9cc8a3fbb5a(["cv_co_1"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> xe829d9cc8a3fbb5a(["cv_co_1"]):::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> x33ce00852b070d6b(["cv_co_2"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x33ce00852b070d6b(["cv_co_2"]):::uptodate
+    x9755545176a05140(["data"]):::uptodate --> xd7594ee14f5d1b90(["train_input"]):::uptodate
+    x5607a26800187e63(["train_test_data"]):::uptodate --> xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate
+    x33ed306cab814ec5(["training_hash"]):::uptodate --> xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> x645767fb4734ee1d(["cv_co_3"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x645767fb4734ee1d(["cv_co_3"]):::uptodate
+    x72b796a43fd7d371(["screener"]):::uptodate --> x0327a91a36b8b78a(["submod_xg"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x0327a91a36b8b78a(["submod_xg"]):::uptodate
+    x27b62fd0d7134fa9(["tfolds"]):::uptodate --> x0327a91a36b8b78a(["submod_xg"]):::uptodate
+    xfee8af392695eaee["input_1"]:::uptodate --> x9755545176a05140(["data"]):::uptodate
+    xe645349da297c10c["input_2"]:::uptodate --> x9755545176a05140(["data"]):::uptodate
+    x72b796a43fd7d371(["screener"]):::uptodate --> x9ac3e268f1e67823(["submod_rf"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x9ac3e268f1e67823(["submod_rf"]):::uptodate
+    x27b62fd0d7134fa9(["tfolds"]):::uptodate --> x9ac3e268f1e67823(["submod_rf"]):::uptodate
+    x71529b40ed4eb343(["cutme"]):::uptodate --> x9662f7590fc15a9b(["components"]):::uptodate
+    x9755545176a05140(["data"]):::uptodate --> x9662f7590fc15a9b(["components"]):::uptodate
+    x125711b5fae4f13e(["fixed"]):::uptodate --> x9662f7590fc15a9b(["components"]):::uptodate
+    x49a047e761f69b68["preds"]:::uptodate --> x9662f7590fc15a9b(["components"]):::uptodate
+    x84969cda3107a412["blocks"]:::uptodate --> x1d906206b5b14e1d(["bids"]):::uptodate
+    x9755545176a05140(["data"]):::uptodate --> x125711b5fae4f13e(["fixed"]):::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> x125711b5fae4f13e(["fixed"]):::uptodate
+    xe829d9cc8a3fbb5a(["cv_co_1"]):::uptodate --> x71529b40ed4eb343(["cutme"]):::uptodate
+    x33ce00852b070d6b(["cv_co_2"]):::uptodate --> x71529b40ed4eb343(["cutme"]):::uptodate
+    x645767fb4734ee1d(["cv_co_3"]):::uptodate --> x71529b40ed4eb343(["cutme"]):::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> x71529b40ed4eb343(["cutme"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x71529b40ed4eb343(["cutme"]):::uptodate
+    xa5a0078967d8482b(["input_1_files"]):::uptodate --> xfee8af392695eaee["input_1"]:::uptodate
+    x7f2c265f651235ec(["input_2_files"]):::uptodate --> xe645349da297c10c["input_2"]:::uptodate
+    x72b796a43fd7d371(["screener"]):::uptodate --> x27b62fd0d7134fa9(["tfolds"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x27b62fd0d7134fa9(["tfolds"]):::uptodate
+  end
+  classDef uptodate stroke:#000000,color:#ffffff,fill:#354823;
+  classDef none stroke:#000000,color:#000000,fill:#94a4ac;
+  linkStyle 0 stroke-width:0px;
+  linkStyle 1 stroke-width:0px;
+```
 
 # Odds and ends
 
-## Porting an old model into new data
+## Glossary
 
-## Iterative development principles
+1.  Source system (`source_system`): A dataset
 
-## Opportunities for future improvement
+2.  Source Id (`source_id`): The unique record identifier within a
+    source system. Within a source system, all records with the same
+    source id are considered a single entity.
+
+3.  hash id (`clean_hash`): A custom generated unique identifier that is
+    nested within a source system and source id that specifies a
+    specific set of identifiers. For example, Dan will result in a
+    different hash id than Daniel, even with all the other inputs held
+    the same. The hash id serves as the base unit of analysis for the
+    matching (that is, the matches are between hash ids). Things are
+    later aggregated to the source system - source id level

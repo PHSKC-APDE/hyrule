@@ -1,5 +1,5 @@
 ---
-title: "ML Record Linkage"
+title: "ML Record Linkage Pipeline"
 format: 
   gfm:
     toc: true
@@ -7,16 +7,17 @@ format:
 ---
 
 Packages to setup the pipeline
+
 ```{r packages1, eval = FALSE}
 install.packages(c('remotes', 'tarchetypes', 'targets', 'glue', 'sf', 'data.table'))
 
 ```
 
 Packages required for the pipeline
+
 ```{r packages2, eval = FALSE}
 install.packages(c('data.table', 'stringr', 'arrow', 'duckdb', 'DBI', 'glue', 'stringr', 'sf', 'tidymodels', 'workflows', 'stacks', 'dplyr', 'ranger', 'xgboost', 'rlang', 'igraph'))
 ```
-
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
@@ -43,20 +44,6 @@ Users should familiarize themselves with the following R-packages and/or methodo
 7.  [`igraph`](https://en.wikipedia.org/wiki/Ensemble_learning): A package for working with networks/graphs. Collections of 1:1 matches may aggregate into full-fledged networks and can be analyzed as such.
 8.  [*string distance metrics*](https://journal.r-project.org/archive/2014-1/loo.pdf): Many of the character variable based comparisons (e.g. name similarity) are string distance metrics. More details can be found here. Implementation is done via [`DuckDB`](https://duckdb.org/docs/sql/functions/char.html) routines.
 
-### Machines vs. probabilistic methods
-
-### Code Location
-
-### Glossary
-
-1.  Source system (`source_system`): A dataset
-
-2.  Source Id (`source_id`): The unique record identifier within a source system. Within a source system, all records with the same source id are considered a single entity.
-
-3.  hash id (`clean_hash`): A custom generated unique identifier that is nested within a source system and source id that specifies a specific set of identifiers. For example, Dan will result in a different hash id than Daniel, even with all the other inputs held the same. The hash id serves as the base unit of analysis for the matching (that is, the matches are between hash ids). Things are later aggregated to the source system - source id level
-
-# Workflow Summary
-
 # Set up
 
 ## Pipeline setup
@@ -77,12 +64,6 @@ Remove the `_targets_r` directory previously written by non-interactive runs of 
 ```{r tunscript}
 tar_unscript()
 ```
-
-```{r tconfig}
-targets::tar_config_get("script")
-
-```
-
 
 ## Packages and functions
 
@@ -107,26 +88,9 @@ bounds = c(.01, .99)
 
 # ML Record Linkage Pipeline
 
-
-```{r}
-writeLines(tar_mermaid(F), 'tm_false.txt')
-writeLines(tar_mermaid(T), 'tm_true.txt')
-m = readLines('tm_false.txt')
-```
-
-```{r printmermaid, results = "asis", echo = FALSE}
-cat(c("```{mermaid}",m, "```"), sep = "\n")
-```
-
-
-
-
-
 ## Prepare Data
 
-This section loads, cleans, organizes, and stores data inputs.
-
-There are two main approaches to record linkage:
+There are two main flavors of record linkage supported by this pipeline:
 
 1.  Link only: Data sets are assumed to have no duplicates, and therefore within dataset linkages are computed. This is specified during the blocking step, and in this example, largely depends on a `source_system` variable.
 2.  De-duplicate (and link): One or more datasets are appended together and within and between dataset linkages are computed.
@@ -180,18 +144,30 @@ Practically, using the hash (instead of source id) as the low-level identifier i
 Handling the data in this way (row based) instead of aggregating thing into list-columns and using set operations also improves computational efficiency – especially for blocking.
 
 ```{r, echo = FALSE}
-load_and_kable = function(x){
+load_target = function(x, idx = 1){
   a = try(tar_read_raw(x), silent = TRUE)
   if(!inherits('try-error', a)){
-    return(knitr::kable(a))
+    if(is.character(a[idx]) && file.exists(a[idx])) a = arrow::read_parquet(a[idx])
+    return(a)
   }else{
-    knitr::kable(data.frame('Target not found'))
+    return(data.frame('Target not found. You may need to reknit the document and run `tar_make()`'))
   }
 }
-load_and_kable('input_1')
 
-load_and_kable('data')
 
+
+```
+
+### Example input data
+
+```{r inputexp, echo = FALSE}
+knitr::kable(head(load_target('input_1'))) 
+```
+
+### Example "cleaned" data
+
+```{r dataexp, echo = F}
+knitr::kable(head(load_target('data'))) 
 ```
 
 ### Secondary identifiers
@@ -233,7 +209,7 @@ list(
 
 ### Contextual variables
 
-Frequency variables are useful to include within the modelling framework as they can adjust/downweight common names. For example, John Smith and John Smith likely is less informative than Unique Name and Unique Name because John Smith is more common. Using the [`create_frequency_table`](R/create_frequency_table.R) function, any variable can be the source of a frequency variable. For a given input value (e.g. John), the resulting relative frequency value computed and then scaled between 0 and 1.
+Frequency variables are useful to include within the modelling framework as they can adjust/downweight common names. For example, "John Smith" and "John Smith" likely is less informative than "Unique Name" and "Unique Name" because John Smith is more common. Using the [`create_frequency_table`](R/create_frequency_table.R) function, any variable can be the source of a frequency variable. For a given input value (e.g. John), the resulting relative frequency value computed and then scaled between 0 and 1.
 
 ```{targets context-variables}
 list(
@@ -251,18 +227,21 @@ list(
 
 ### Other data cleaning ideas
 
-1.  In real data, there are common "junk" names – e.g. John Doe. These should be removed
+1.  Common "junk" names (e.g. John Doe) should be removed. Reviewing the names with high frequency is generally a good way to find "junk" names.
+2.  Limit date of birth values to reasonable limits (e.g. 1900 - current year).
 
 ## Training data
 
 ### Creating (new) training data
 
-Unlike probabilistic methods (e.g. splink), machine learning methods require training data to operate. When beginning a new project, a few options are available:
+Unlike probabilistic methods (e.g. splink), machine learning methods require training data to operate (although probabilistic methods probably require manually labeled pairs to be useful anyway). When beginning a new project, a few options are available:
 
 1.  Borrow from a previously fit ML model
 2.  Borrow from a probabilistic model
-3.  Use some deterministic rules
-4.  Randomly sampled pairs, if you are mad
+3.  Use some deterministic rules to generate matches/non-matches
+4.  Randomly sampled manually labeled pairs
+
+Regardless of the approach, the goal is to have enough pairs to fit a draft model. The draft model can then be used to generate match scores that can inform the selection of additional pairs for manual labeling.
 
 ### Prepping training data for this workflow
 
@@ -445,7 +424,7 @@ list(
 )
 ```
 
-The models are tuned via [bayesian hyperparameter tuning](https://tune.tidymodels.org/reference/tune_bayes.html) and the best performing models are considered for inclusion in the ensemble.
+The models undergo [bayesian hyperparameter tuning](https://tune.tidymodels.org/reference/tune_bayes.html) and the best performing models are considered for inclusion in the ensemble.
 
 ```{targets submod-fit}
 submods = list(
@@ -617,7 +596,7 @@ cv_cutoffs = list(
 
 ### Identifying the cutpoint and OOS statistics
 
-The final cutoff point is averaged over each iteration of the cross validation process (the `cv_co` set of products) via the [`identify_cutoff`](R/identify_cutoff.R) function. This function also computes the full out of sample (OOS) results.
+The cross-validated results are collected and summarized via the [`identify_cutoff`](R/identify_cutoff.R) function during the `cutme` target. The results are analyzed to determine a cutpoint that maximizes accuracy. Out of sample fit statistics are also generated during this step.
 
 ```{targets z-cutoffs}
 list(
@@ -639,6 +618,20 @@ tarchetypes::tar_combine(
 )
 ```
 
+The resulting `cutme` target contains three items:
+
+1.  A cut-point at the value of maximum accuracy, as computed from the cross validation process (the `cv_co` set of products)
+2.  Summarized cross-validation results (when `Iteration == 0` in the resulting data.frame) and the constituent parts
+3.  Out of sample fit metrics.
+
+Reviewing the results, especially the out of sample fit metrics will give a good indication on how the model is performing. An example table is reproduced below:
+
+```{r oostab, echo = FALSE}
+oos = try(tar_read(cutme)[[3]])
+if(inherits(oos,'try-error')) oos = data.frame('cutme target not found. Try rerunning tar_make()')
+knitr::kable(oos)
+```
+
 ## From 1:1 links to networks
 
 Once a set of links at the hash id level have been identified, they must be aggregated to the level of interest – in this case, source id. This is done by organizing all the individual 1:1 links together into a series of networks and aggregating those networks by source id. The [`compile_links`](R/compile_links.R) function does this two step aggregation process and computes some metrics at each scale (e.g. the hash id level and then the source id level).
@@ -655,9 +648,21 @@ tar_target(components,
            ), format = 'file')
 ```
 
+The second item in the output of the `components` target is a summary file, that reports the density (# of connects/# of total possible connections) and size (number of nodes within the cluster). Columns may be prefixed with `s#`, where the number refers to the level (each increasing level represents a nested subcluster).
+
+```{r netmet, echo = FALSE}
+net = try(tar_read(components))
+if(!inherits(net, 'try-error')){
+  net = setDT(arrow::read_parquet(net[2]))
+}else{
+  net = data.frame('components target not found. Try rerunning tar_make()')
+}
+knitr::kable(head(net))
+```
+
 ### Applying constraints
 
-While this example does not have any network based constraints, certain uses cases may require the implementation of deterministic rules. For example, when linking death records to other types of administrative information, users may want to enforce a rule that only one death record may within a network/cluster of linkages (otherwise, it would imply the "person" represented by the collection of records died twice). The implementation of those sorts of rules is probably best done as part of the `complile_links` function (or as a new subsequent step).
+While this example does not have any network based constraints, certain uses cases may require the implementation of deterministic rules. For example, when linking death records to other types of administrative information, users may want to enforce a rule that only one death record may within a network/cluster of linkages (otherwise, it would imply the "person" represented by the collection of records died more than once). The implementation of those sorts of rules is probably best done as part of the `compile_links` function (or as a new subsequent step).
 
 ### Identity Table
 
@@ -665,22 +670,25 @@ The first part of results stored in `components` target is a file path to a parq
 
 As currently implemented, the `final_comp_id`s are not persistent between model versions.
 
-## Did it work?
+```{r showcomps, echo = F}
+comps = load_target('components')
+knitr::kable(head(comps))
+```
 
-### Assessing the evaluation metrics
+# Final Pipeline
 
-### Manual evaluation heuristics
+```{r printmermaid, results = "asis", echo = FALSE}
+#| label: dag
 
-#### Large low density clusters
-
-#### Twins
-
-#### Multiple people within a source id
+cat(c("```{mermaid}",tar_mermaid(T), "```"), sep = "\n")
+```
 
 # Odds and ends
 
-## Porting an old model into new data
+## Glossary
 
-## Iterative development principles
+1.  Source system (`source_system`): A dataset
 
-## Opportunities for future improvement
+2.  Source Id (`source_id`): The unique record identifier within a source system. Within a source system, all records with the same source id are considered a single entity.
+
+3.  hash id (`clean_hash`): A custom generated unique identifier that is nested within a source system and source id that specifies a specific set of identifiers. For example, Dan will result in a different hash id than Daniel, even with all the other inputs held the same. The hash id serves as the base unit of analysis for the matching (that is, the matches are between hash ids). Things are later aggregated to the source system - source id level
