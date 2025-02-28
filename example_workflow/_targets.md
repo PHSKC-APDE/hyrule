@@ -18,18 +18,6 @@
 - [Odds and ends](#odds-and-ends)
   - [Glossary](#glossary)
 
-Packages to setup the pipeline
-
-``` r
-install.packages(c('remotes', 'tarchetypes', 'targets', 'glue', 'sf', 'data.table'))
-```
-
-Packages required for the pipeline
-
-``` r
-install.packages(c('data.table', 'stringr', 'arrow', 'duckdb', 'DBI', 'glue', 'stringr', 'sf', 'tidymodels', 'workflows', 'stacks', 'dplyr', 'ranger', 'xgboost', 'rlang', 'igraph'))
-```
-
 # Overview
 
 ## About this document
@@ -83,14 +71,17 @@ methodological concepts:
     [`tune`](https://tune.tidymodels.org/),
     [`stacks`](https://stacks.tidymodels.org/), and
     [`yardstick`](https://yardstick.tidymodels.org/).
-5.  *machine learning*: This example uses
+5.  machine learning: This example uses
     [`xgboost`](https://xgboost.readthedocs.io/en/stable/R-package/xgboostPresentation.html)
     gradient boosted machines,
     [`ranger`](https://github.com/imbs-hl/ranger) random forests, and
     [`kernlab`](https://cran.r-project.org/web/packages/kernlab/kernlab.pdf)
-    support vector machines.
-6.  [*stacking/ensemble
-    learning*](https://en.wikipedia.org/wiki/Ensemble_learning): This
+    support vector machines. [Lasso
+    regressions](https://en.wikipedia.org/wiki/Lasso_(statistics)) via
+    [`glmnet`](https://cran.r-project.org/web/packages/glmnet/index.html)
+    are used as a screener and a ensembling model.
+6.  [stacking/ensemble
+    learning](https://en.wikipedia.org/wiki/Ensemble_learning): This
     method uses stacked generalization (aka stacking) for model
     ensembling. The [`stacks`](https://stacks.tidymodels.org/) package
     provides the implementation.
@@ -98,11 +89,11 @@ methodological concepts:
     package for working with networks/graphs. Collections of 1:1 matches
     may aggregate into full-fledged networks and can be analyzed as
     such.
-8.  [*string distance
-    metrics*](https://journal.r-project.org/archive/2014-1/loo.pdf):
-    Many of the character variable based comparisons (e.g. name
-    similarity) are string distance metrics. More details can be found
-    here. Implementation is done via
+8.  [string distance
+    metrics](https://journal.r-project.org/archive/2014-1/loo.pdf): Many
+    of the character variable based comparisons (e.g. name similarity)
+    are string distance metrics. More details can be found here.
+    Implementation is done via
     [`DuckDB`](https://duckdb.org/docs/sql/functions/char.html)
     routines.
 
@@ -1068,3 +1059,35 @@ graph LR
     the same. The hash id serves as the base unit of analysis for the
     matching (that is, the matches are between hash ids). Things are
     later aggregated to the source system - source id level
+
+### Running this pipeline
+
+To use/run this pipeline, users must:
+
+1.  Install the relevant packages:
+
+    Packages to setup the pipeline -
+
+    ``` r
+    install.packages(c('remotes', 'tarchetypes', 'targets', 'glue', 'sf', 'data.table'))
+
+    remotes::install_github('PHSKC-APDE/hyrule')
+    ```
+
+    Packages required for the pipeline to run -
+
+    ``` r
+    install.packages(c('data.table', 'stringr', 'arrow', 'duckdb', 'DBI', 'glue', 'stringr', 'sf', 'tidymodels', 'workflows', 'stacks', 'dplyr', 'ranger', 'xgboost', 'rlang', 'igraph'))
+    ```
+
+2.  Render `_targets.qmd` (this file). This will convert the
+    target-markdown cells in this document into .R files (stored in
+    [`_targets_r`](_targets_r/)). Intrepid users can use the rendered
+    results (specifically the `_targets.R` file and the files stored in
+    `_targets_r`) if they’d rather no longer bother with the .qmd
+    approach.
+
+3.  Run `tar_make()` to execute the pipeline.
+
+4.  (Optional) Re-render `_targets.qmd` to populate the few sections
+    that pull data from the pipeline
