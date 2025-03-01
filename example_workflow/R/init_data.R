@@ -50,6 +50,8 @@ init_data = function(input, output_file = NULL, ...){
   ## Sometimes, invalid names are in the data (e.g. REFUSED)
   ## It is good to remove those. "Bad" names can often by found by tabulating the frequency
   ## of names and seeing which appear most often.
+  ids[first_name_noblank %in% c('DECLINED', 'NONE'), first_name_noblank := NA]
+  ids[last_name_noblank %in% c('DECLINED', 'NONE'), last_name_noblank := NA]
 
   ## clean date of birth ----
   ids[, dob_clean := as.Date(date_of_birth, format = '%m/%d/%Y')]
