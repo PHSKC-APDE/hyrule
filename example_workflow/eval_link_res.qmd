@@ -9,7 +9,7 @@ editor: visual
 `tar_make()` has been successfully run
 
 ```{r}
-library('data.table')
+library('data.table',quietly = TRUE, verbose = FALSE)
 library('DBI')
 library('glue')
 library('targets')
@@ -20,9 +20,20 @@ tar_source()
 
 ## Fit Metrics
 
-## "Weird" results
+## Review Clusters Metrics
 
 ```{r}
+summ = setDT(arrow::read_parquet(tar_read(components)[2]))
+setorder(summ, +final_density)
+
+# Clusters that are large and low density
+knitr::kable(head(summ[final_size > 10]))
+
+# High density clusters
+knitr::kable(tail(summ[final_size > 10]))
+```
+
+```{r visnetwork}
 
 # Get a cluster's details
 net = retrieve_network_info(net_id_val = '1_2',
@@ -37,6 +48,9 @@ vis = vis_network(
   net$edge, 
   tooltip_cols = c('first_name_noblank', 'last_name_noblank', 
                    'dob_clean', 'clean_hash'),
-  labels = 'final_comp_id')
+  labels = 'final_comp_id',
+  return_data = T)
+
+plot(vis[[1]])
 
 ```

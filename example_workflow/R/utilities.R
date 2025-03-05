@@ -35,3 +35,13 @@ load_parquet_to_ddb_table = function(ddb, files, table){
   return(table)
 }
 
+#' Load a target -- mostly for visualization in the documentation
+load_target = function(x, idx = 1){
+  a = try(tar_read_raw(x), silent = TRUE)
+  if(!inherits('try-error', a)){
+    if(is.character(a[idx]) && file.exists(a[idx])) a = arrow::read_parquet(a[idx])
+    return(a)
+  }else{
+    return(data.frame('Target not found. You may need to reknit the document and run `tar_make()`'))
+  }
+}
