@@ -24,5 +24,3 @@ s_params = tibble::tribble(~NAME, ~MODEL,
 s_params$TUNER = 'bayes'
 s_params$nm = s_params$NAME
 
-  
-

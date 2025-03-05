@@ -1,0 +1,16 @@
+---
+title: "Making Training Pairs"
+format: gfm
+editor: visual
+---
+
+## Creating (new) training data
+
+Unlike probabilistic methods (e.g. splink), machine learning methods require training data to operate. When beginning a new project, a few options are available:
+
+1.  Borrow from a previously fit ML model
+2.  Borrow from a probabilistic model
+3.  Use some deterministic rules to generate matches/non-matches
+4.  Randomly sampled manually labeled pairs
+
+Regardless of the approach, the goal is to have enough pairs to fit a draft model. The draft model can then be used to generate match scores that can inform the selection of additional pairs for manual labeling.

@@ -9,14 +9,14 @@
   - [Packages and functions](#packages-and-functions)
 - [ML Record Linkage Pipeline](#ml-record-linkage-pipeline)
   - [Data Preparation](#data-preparation)
-  - [Constructing Training Data](#constructing-training-data)
-  - [Model Specification](#model-specification)
+  - [Training Data](#training-data)
   - [Blocking](#blocking)
+  - [Model Specification](#model-specification)
   - [Predicting Match Scores](#predicting-match-scores)
   - [Evaluation and Cutoffs](#evaluation-and-cutoffs)
   - [From 1:1 links to networks](#from-11-links-to-networks)
-- [Final Pipeline](#final-pipeline)
-- [Odds and ends](#odds-and-ends)
+  - [Final Pipeline](#final-pipeline)
+- [Odds and ends](#odds-and-ends-6)
   - [Glossary](#glossary)
 
 # About
@@ -201,8 +201,8 @@ Each subsequent section will roughly the same structure:
 
 - Targets: Code and commentary about the individual targets (i.e. steps)
 
-- General Commentary: Any additional bits of information relevant to the
-  user about the given section
+- Odds and Ends: Any additional bits of information relevant to the user
+  about the given section
 
 ## Data Preparation
 
@@ -225,7 +225,7 @@ into `input_1` and `input_2`.
 list(
   # file paths to data
   tarchetypes::tar_files_input(input_1, '../data-raw/fake_one.parquet'),
-  tarchetypes::tar_files_input(input_2, '../data-raw/fake_two.parquet'),
+  tarchetypes::tar_files_input(input_2, '../data-raw/fake_two.parquet')
 )
 
 #> Establish _targets.R and _targets_r/targets/specify-input-data.R.
@@ -238,7 +238,7 @@ created by appending `input_1` and `input_2` together and conducting
 some data cleaning on primary identifiers like name and date of birth. A
 new unique row identifier (called `clean_hash`) is also created at this
 step. A detailed description of what `init_data` does is provided in the
-“General Commentary” section below.
+“Odds and Ends” section below.
 
 ``` r
 list(
@@ -314,7 +314,7 @@ list(
 #> Establish _targets.R and _targets_r/targets/context-variables.R.
 ```
 
-### General Commentary
+### Odds and Ends
 
 #### Types of identifiers
 
@@ -374,7 +374,7 @@ should not be considered immutable or complete. Each project will likely
 require its own data cleaning routines as data can be messy in nearly
 infinite ways.
 
-### Data cleaning
+#### Data cleaning
 
 [Documentation from the splink
 package](https://moj-analytical-services.github.io/splink/demos/tutorials/01_Prerequisites.html)
@@ -445,7 +445,7 @@ the `data` target is a “cleaned” version of `input_1` and `input_2`.
 | System 2 | 0_10003 | FELICIA | L | LADYOFTHEHOUSE | F | 1971-03-08 | faf768bdf6136246e2909f47ecd5d979 |
 | System 1 | 0_10004 | MISS | L | ENNIS | M | 1973-05-31 | 61052dbd3e94d0da0cefb0a0d2f230cf |
 
-## Constructing Training Data
+## Training Data
 
 ### Overview
 
@@ -454,53 +454,23 @@ cleaned data and variables from the Data Preparation section.
 
 ### Targets
 
-### General Commentary
+#### `source_id` to `clean_hash`
 
-### Input(s)
+The labeled pairs for this workflow comes from the `pairs` dataset
+within `hyrule` package. However, this dataset specifies records as a
+combination of `source_system` and `source_id` rather than as
+`clean_hash`. `convert_sid_to_hid` converts `pairs` so that the records
+are identified by `clean_hash` and the results are stored (as a link to
+a parquet file) in `train_input`
 
-1.  A set of manually labeled pairs of records. The labeling should note
-    whether the two records in the pair are a match (1) or not (0).
-2.  The outputs of the “Prepare data” collection of steps.
-
-### Output(s)
-
-### Creating (new) training data
-
-Unlike probabilistic methods (e.g. splink), machine learning methods
-require training data to operate. When beginning a new project, a few
-options are available:
-
-1.  Borrow from a previously fit ML model
-2.  Borrow from a probabilistic model
-3.  Use some deterministic rules to generate matches/non-matches
-4.  Randomly sampled manually labeled pairs
-
-Regardless of the approach, the goal is to have enough pairs to fit a
-draft model. The draft model can then be used to generate match scores
-that can inform the selection of additional pairs for manual labeling.
-
-### Prepping training data for this workflow
-
-The `pairs` dataset within `hyrule` is at the source id rather than the
-hash level. This next target/block of code converts from source id to
-hash id. Generally, this step will not be required as the training data
-will be natively at the hash level. Additionally, most users will have
-their training pairs stored in a database and/or as a set of loadable
-files (e.g. csv) that can be read in with
-`tarchetypes::tar_files_input`.
-
-Minimally, labeled pairs (e.g. training data) should be stored in the
-following format:
-
-| id1 | id2 | pair |
-|----:|----:|-----:|
-|   1 |   3 |    0 |
-|   2 |   4 |    1 |
-
-`id1`, `id2`, and `pair` are all required columns. `pair` must be a
-numeric column with the values of 0 (no-match), 1 (match), or -1
-(unknown). Additional columns can be added to the dataset, but they will
-be unused by the current implementation.
+Note: In most workflows, this step will not be required as the training
+data will be natively at the hash level. Instead, most users will want
+to populate `train_input` with a set of loadable files (e.g. csv) that
+can be registered with `tarchetypes::tar_files_input` and/or some of
+function that loads the labeled pairs from storage. As long as
+`train_input` ultimately is a path to a parquet file with at least three
+columns (`id1`,`id2`, and `pair`) most subsequent targets will work with
+little to no modification.
 
 ``` r
 list(
@@ -520,15 +490,160 @@ list(
 #> Establish _targets.R and _targets_r/targets/prep-traindat.R.
 ```
 
-### Specifying a formula
+#### Specifying a formula
 
 Like most modelling/regression/machine learning exercises, a formula
 must be specified. Something like `pair ~ varA + varB + varC` where
 `pair` refers to the column in the training data indicating whether two
 records are a match and `varA`, `varB`, and `varC` are variables that
-are likely predictive of the match-iness between two records. For this
-exercise, the following variables are of interest (and will be computed
-– see below):
+are likely predictive of the match-iness between two records. The
+commentary subsection contains a complete description of the variables.
+
+``` r
+f = pair ~ dob_year_exact + dob_mdham + gender_agree +
+  first_name_jw + last_name_jw + name_swap_jw +
+  complete_name_dl + middle_initial_agree + last_in_last +
+  first_name_freq + last_name_freq +
+  zip_overlap + exact_location
+  
+
+#> Establish _targets.R and _targets_r/globals/formula.R.
+```
+
+#### Build training model frame
+
+The [`compile_training_data`](R/compile_training_data.R) function loads
+and standardizes labeled pairs, uses the `make_model_frame` function
+internally to go from labeled pairs to “training data.” Before saving
+the results, some sanity checks are performed to ensure that too many of
+the labeled pairs get dropped due to missing data or some other set of
+data gremlins. The results are stored in a parquet file via the
+`train_test_data` target.
+
+Note: A detailed description of the
+[`make_model_frame`](R/make_model_frame.R) function that combines
+`train_input`, `data` and the formula (`f`) to create a model frame is
+provided in the commentary section.
+
+``` r
+list(tar_target(
+  train_test_data,
+  compile_training_data(
+    input = train_input,
+    output_file = file.path(outdir, 'train_and_test.parquet'),
+    formula = f,
+    data = data,
+    loc_history = lh,
+    zip_history = zh,
+    freq_tab_first_name = freqs[1],
+    freq_tab_last_name = freqs[2],
+    freq_tab_dob = freqs[3]
+  )
+)) 
+#> Establish _targets.R and _targets_r/targets/training-data.R.
+```
+
+### Test/train split
+
+Model frame (`train_test_data`) is split into two datasets: “train” and
+“test.” The “train” dataset is what the linkage model(s) will be fit on
+while the “test” dataset is held out of the estimation process and only
+later used for the computation of fit statistics.
+
+Two targets are specified in this block. The first, `training_hash`
+takes a hash of the results from the previous step (stored in
+`train_test_data`). This hash, if it changes, triggers the creation of
+the `test_train_split` target which uses the `split_tt` function to
+split the overall model frame into the aforementioned “train” and “test”
+datasets. The two step process (hash and then split) is used so that
+spurious changes in the process that creates `test_train_data` don’t get
+propagated further. That is, if the model frame meaninfully changes,
+downstream targets will be invalidated and recomputed, but a
+non-substantive change will not trigger dependencies.
+
+``` r
+list(
+  tar_target(training_hash, rlang::hash(arrow::read_parquet(train_test_data))),
+  tar_target(
+    test_train_split,
+    split_tt(
+      hash = training_hash,
+      training_data = train_test_data,
+      fraction = .15,
+      train_of = file.path(outdir, 'train.parquet'),
+      test_of = file.path(outdir, 'test.parquet')
+    )              ,
+    format = 'file'
+  )
+)
+#> Establish _targets.R and _targets_r/targets/split-test-train.R.
+```
+
+### Odds and Ends
+
+#### Training data format
+
+Labeled pairs to be used for training must be organized into a data
+frame with three columns: `id1`, `id2`, and `pair`. The first two
+columns specify pairs of records while the `pair` column is a binary
+flag indicating whether the two (hash) ids are a match (1) or not (0).
+For example:
+
+| id1 | id2 | pair |
+|----:|----:|-----:|
+|   1 |   3 |    0 |
+|   2 |   4 |    1 |
+
+#### Cleaning the labeled pairs
+
+The `compile_training_data` function that is the core of the process
+that creates the `train_test_data` target enforces a few consistencies
+on the labeled pairs while creating the model frame:
+
+1.  `id1` and `id2` are standardized such that `id1` \< `id2`.
+2.  Duplicates are dropped
+3.  Contradictions (e.g. the first wave of training data says A !=B
+    while the second set says A = B) are reconciled by taking the last
+    observed value for a given `id1` and`id2` combination
+4.  The records implied by the value of `id1` and/or `id2` must still
+    exist within `data`. Most of the time, this will be a non-issue, but
+    major changes to the data format or data cleaning routines can
+    trigger this provision.
+
+#### Example rows from `train_test_data`
+
+``` r
+load_target(train_test_data) |>
+  head() |>
+  knitr::kable()
+```
+
+| x                                                               |
+|:----------------------------------------------------------------|
+| Error in eval(expr, envir) : object ‘train_test_data’ not found |
+
+#### Making the model frame
+
+A model frame is a data frame containing the dependent and independent
+variables as informed by the input data and the model formula. The
+[`make_model_frame`](R/make_model_frame.R) function is used by the
+`compile_training_data` function to create the model frame from the
+inputs (cleaned data, derivative datasets like the frequency variables,
+formula, labeled pairs, etc.). The actual computation is handled in a
+temporary DuckDB database so that expressive (and relatively portable)
+sql can be used. DuckDB is also quite clever when working with parquet
+files and optimizing queries.
+
+Note: `make_model_frame` function is used to do this (usually nested
+within another function). This function takes in a few parquet file
+paths (and/or table specified by `DBI::Id()`) and generates a sql query
+that when executed in the the correct environment will return a data
+frame containing pair level variables.
+
+#### Formula description
+
+For this exercise, the following variables are of interest (and will be
+computed – see below):
 
 1.  `dob_year_exact`: exact match of year of birth
 2.  `dob_mdham`: hamming distance between month and day of birth
@@ -550,112 +665,122 @@ exercise, the following variables are of interest (and will be computed
 13. `exact_location`: binary flag indicating address histories overlap
     within 3 meters (location only – not spatio-temporal).
 
-``` r
-f = pair ~ dob_year_exact + dob_mdham + gender_agree +
-  first_name_jw + last_name_jw + name_swap_jw +
-  complete_name_dl + middle_initial_agree + last_in_last +
-  first_name_freq + last_name_freq +
-  zip_overlap + exact_location
-  
+## Blocking
 
-#> Establish _targets.R and _targets_r/globals/formula.R.
-```
+### Overview
 
-### Creating the variables
+Blocking creates the list of pairs to evaluate for match scores. In this
+implementation, a series of sql statements are evaluated and the pairs
+that fit one or more of those conditions are cached for evaluation via
+the linkage model.
 
-To create the variables specified by the formula, this workflow uses a
-function called [`make_model_frame`](R/make_model_frame.R).
-`make_model_frame` takes a number of inputs (datasets, the training
-pairs, frequency tables, etc.) and computes the required columns from
-the data. The actual computation is handled in a temporary DuckDB
-database so that expressive (and relatively portable) sql can be used.
-DuckDB is also quite clever when working with parquet files and
-optimizing queries.
+### Targets
 
-### Compile training data
+#### Blocking rules
 
-#### Load and prepare training data
+Blocking rules are specified as DuckDB friendly SQL statements and refer
+to a `l` and a `r` dataset. In this implementation, both `l` and `r`
+reference the `data` target. A brief description of how to interpret the
+rules is provided in the Odds and Ends part of this section.
 
-At this stage, the `train_input` step is a basic data.frame (technically
-a file path to a data.frame) with three columns: `id1`, `id2`, and
-`pair`. As described above, the first two columns specify pairs of
-records while the `pair` column is a binary flag indicating whether the
-two (hash) ids are a match (1) or not (0). To be usable for model
-fitting, the training pairs must be screened for duplicates,
-contradictions (e.g. the first wave of training data says A !=B while
-the second set says A = B) must be reconciled, and the ids must be
-checked for validity (e.g. the input data might have changed the hash
-for a particular row so that a given pair in the training data doesn’t
-have a counterpart in the main data).
-
-#### Computing prediction variables
-
-Once the training pairs are prepared, the predictor variables must be
-created. In this workflow, the `make_model_frame` function is used to do
-this (usually nested within another function). This function takes in a
-few parquet file paths (and/or table specified by `DBI::Id()`) and
-generates a sql query that when executed in the the correct environment
-will return a data frame containing pair level variables.
-
-For preparing the training data,
-[`compile_training_data`](R/compile_training_data.R) loads and
-standardizes labeled pairs, uses `make_model_frame` (with the previously
-created targets as inputs) to go from labeled pairs to “training data.”
-Before saving the results, some sanity checks are performed to ensure
-that too many of the labeled pairs get dropped due to missing data or
-some other set of data gremlins.
+The `make_block_rules` function takes the specified rules, does some
+additional SQL processing/writing, and organizes them into a data.frame
+(the `qgrid` target). The use of `tar_group_by` (with `qid` as the by
+variable) means that the next target that depends on `qgrid` will
+execute once per row (analogous to how `tar_map` is used in the Model
+Specification section of this document).
 
 ``` r
-
-list(
-  tar_target(
-    train_test_data, 
-    compile_training_data(
-        input = train_input,
-        output_file = file.path(outdir, 'train_and_test.parquet'),
-        formula = f,
-        data = data,
-        loc_history = lh,
-        zip_history = zh,
-        freq_tab_first_name = freqs[1],
-        freq_tab_last_name = freqs[2],
-        freq_tab_dob = freqs[3]
-      )
-    )
-  )
-
-#> Establish _targets.R and _targets_r/targets/training-data.R.
-```
-
-### Test/train split
-
-The labeled data is split into two chunks datasets “train” and “test.”
-The training dataset will inform the models that will be fit on the
-later sections while the “test” dataset is held out and will be used to
-generate out of sample fit metrics.
-
-``` r
-list(
-  tar_target(
-    training_hash,
-    rlang::hash(arrow::read_parquet(train_test_data))
-  ),
+blocking_rules = c(
+  'l.last_name_noblank = r.last_name_noblank',
   
-  tar_target(test_train_split, 
-             split_tt(hash = training_hash, 
-                      training_data = train_test_data, 
-                      fraction = .15, 
-                      train_of = file.path(outdir, 'train.parquet'), 
-                      test_of = file.path(outdir, 'test.parquet'))
-             , format = 'file')
+  'l.dob_clean = r.dob_clean',
   
+  "jaro_winkler_similarity(l.first_name_noblank, r.first_name_noblank) >.7
+  and datepart('year', l.dob_clean) = datepart('year', r.dob_clean)"
 )
-#> Establish _targets.R and _targets_r/targets/split-test-train.R.
+
+list(tarchetypes::tar_group_by(qgrid, command = make_block_rules(rules = blocking_rules), qid)) 
+#> Establish _targets.R and _targets_r/targets/block-1.R.
 ```
+
+### Computing and compiling pairs for evaluation
+
+Once the blocking rules have been properly formatted and prepared, they
+are then computed. The `deduplicate` argument in the
+[`make_block`](R/blocking.R) function (`blocks` target) governs whether
+records from the same source system are “allowed” to be included in the
+final set of blocked pairs. Recall that there will be a (sub)target for
+every row in `qgrid`.
+
+Once the record pairs that meet at least on blocking rules are
+identified (the `blocks` target), those pairs are appended together,
+de-duplicated, and split into equal size data frames as the `bids`
+target (with `compile_blocks` doing the work). The file paths are then
+entered into the pipeline via the `bid_files` target so that the
+pipeline behaves. The resulting pairs will be evaluated for matchiness
+by the record linkage model and are split into chunks to facilitate
+[parallelized computation (if used/set
+up)](https://books.ropensci.org/targets/performance.html#parallel-processing).
+
+Note: records from the same source system with the same source id are
+automatically excluded from final list of evaluation pairs as they will
+be added as fixed links by a later step.
+
+``` r
+list(
+  tar_target(
+    blocks,
+    make_block(
+      q = qgrid,
+      data = data,
+      id_col = 'clean_hash',
+      deduplicate = FALSE,
+      output_folder = outdir
+    ),
+    pattern = map(qgrid),
+    format = 'file'
+  ),
+  tar_target(
+    bids,
+    compile_blocks(
+      blocks = blocks,
+      output_folder = outdir,
+      chk_size = 10000
+    ),
+    format = 'file'
+  ),
+  tar_target(bid_files, bids)
+)
+#> Establish _targets.R and _targets_r/targets/block-2.R.
+```
+
+### Odds and ends
+
+#### Writing good blocking rules
+
+The `splink` package [has a great write up on good blocking
+rules](https://moj-analytical-services.github.io/splink/demos/tutorials/03_Blocking.html)
+and the approach used in this example is heavily influenced by the
+splink package.
+
+#### Rules used by this example workflow
+
+Three rules are instantiated below:
+
+1.  Exact match on last name
+2.  Exact match on DOB
+3.  Fuzzy match on first name and exact match on year
+
+For further evaluation, a pair of records must meet at least one of the
+conditions.
 
 ## Model Specification
 
-The linkage model consists of three parts:
+### Overview
+
+This section provides to code to implement the linkage model, which
+consists of three parts:
 
 1.  A lasso logistic regression that quickly screens out “obvious”
     matches and non-matches
@@ -669,7 +794,14 @@ estimates. Together, steps 2 and 3 are a “stacking” ensemble model
 approach where a diverse set of models are combined together to produce
 results that are better than a single model.
 
-### Screening model
+### Targets
+
+#### Screening model
+
+The screening model (saved to `screener`) is a lasso regression. The
+`fit_screening_model` function uses the “train” model frame and some
+bounds (defined earlier in the document) to fit and return the screening
+model.
 
 ``` r
 list(
@@ -679,11 +811,31 @@ list(
 #> Establish _targets.R and _targets_r/targets/screener.R.
 ```
 
-### Submodels
+#### Folds
+
+The stacking framework requires the submodels/child models to be fit
+with cross-validation (as a check against over-fitting). As such, the
+training dataset is subdivided into 5 approximately equal sized chunks
+via the `make_folds` function with results stored in the `tfolds`
+target.
+
+``` r
+list(tar_target(tfolds, 
+                command = make_folds(test_train_split[2],
+                                     screener)))
+#> Establish _targets.R and _targets_r/targets/submod-folds.R.
+```
+
+### Specifying submodel families
 
 For an effective ensemble, a variety of model families are employed.
 This example uses tuned versions of support vector machines, random
-forests, and xgboost gradient boosted machines.
+forests, and xgboost gradient boosted machines. The model types have
+been shown to be effective in other uses cases and the underlying
+algorithms are sufficiently different from each other that each set of
+submodels might be able to optimize for a different subset of tasks.
+Other model types (e.g. neural nets, logistic regression, etc.) can be
+added to the ensemble if desired.
 
 ``` r
 svm = parsnip::svm_linear(
@@ -712,25 +864,22 @@ s_params = tibble::tribble(~NAME, ~MODEL,
 s_params$TUNER = 'bayes'
 s_params$nm = s_params$NAME
 
-  
-
 #> Establish _targets.R and _targets_r/globals/submodel_specs.R.
 ```
 
-The stacking framework requires the submodels/child models to be fit
-with cross-validation (as a check against over-fitting). As such, the
-training dataset is subdivided into 5 approximately equal sized chunks.
+#### Tuning and fitting the submodels
 
-``` r
-list(
-  tar_target(tfolds, command = make_folds(test_train_split[2], screener))
-)
-#> Establish _targets.R and _targets_r/targets/submod-folds.R.
-```
+The models specified above (and organized into `s_params`) are fit using
+[bayesian hyperparameter
+tuning](https://tune.tidymodels.org/reference/tune_bayes.html). The
+tuning process will create a series of candidate models with different
+hyper-parameter settings which are ensembled together in the next
+target.
 
-The models undergo [bayesian hyperparameter
-tuning](https://tune.tidymodels.org/reference/tune_bayes.html) and the
-best performing models are considered for inclusion in the ensemble.
+`tar_map` is a short-hand way to create an individual target for each
+family of submodels: `submod_svm`, `submod_xg` and `submod_rf`. These
+targets will contain the model fit objects and the cross validated
+results required for the subsquent ensembling step.
 
 ``` r
 submods = list(
@@ -755,8 +904,15 @@ submods = list(
 
 ### Stacked ensemble model
 
-The submodels are ensembled together via a lasso regression. The output
-model object is also saved.
+The sub-models are ensembled together in the `create_stacked_model`
+function using lasso regression. Lasso regression is used because is
+“automatically” performs variable selection as part of its fitting
+process. The final linkage model (screening model + submodels +
+ensemble) is stored in the `model` target. The `model` target is then
+explicitly saved to disk (`model_path` target). This second step allows
+for subsequent steps to load the model lazy way which is useful should
+[parallel pipeline execution be implemented (an exercise left to the
+reader)](https://books.ropensci.org/targets/performance.html#parallel-processing).
 
 ``` r
 list(
@@ -780,90 +936,24 @@ tarchetypes::tar_combine(
 #> Establish _targets.R and _targets_r/targets/z-ensemble.R.
 ```
 
-## Blocking
-
-Blocking creates the list of pairs to evaluate for match scores. In this
-implementation, a series of sql statements are evaluated and the pairs
-that fit one or more of those conditions are cached for evaluation via
-the linkage model.
-
-### Specifying blocking rules with SQL
-
-Blocking rules are specified as DuckDB friendly SQL statements and refer
-to a `l` and a `r` dataset. In this implementation, both `l` and `r` are
-the `data` target. The `splink` package[has a great write up on good
-blocking
-rules](https://moj-analytical-services.github.io/splink/demos/tutorials/03_Blocking.html)
-and the approach used in this example is heavily influenced by the
-splink package.
-
-Three rules are instantiated below:
-
-1.  Exact match on last name
-2.  Exact match on DOB
-3.  Fuzzy match on first name and exact match on year
-
-For further evaluation, a pair of records must meet at least one of the
-conditions.
-
-``` r
-blocking_rules = c(
-  'l.last_name_noblank = r.last_name_noblank',
-  'l.dob_clean = r.dob_clean',
-  "jaro_winkler_similarity(l.first_name_noblank, r.first_name_noblank) >.7
-   and datepart('year', l.dob_clean) = datepart('year', r.dob_clean)"
-  )
-
-list(
-  tarchetypes::tar_group_by(qgrid, 
-                            command = make_block_rules(rules = blocking_rules),
-                            qid)
-)
-
-#> Establish _targets.R and _targets_r/targets/block-1.R.
-```
-
-### Computing and compiling pairs for evaluation
-
-Once the blocking rules have been properly formatted and prepared, they
-are then computed. The `deduplicate` argument in the
-[`make_block`](R/blocking.R) function (`blocks` target) governs whether
-records from the same source system are “allowed” to be included in the
-final set of blocked pairs. Records from the same source system with the
-same source id are automatically excluded from final list of evaluation
-pairs as they will be added as fixed links by a later step.
-
-``` r
-list(
-tar_target(blocks, make_block(q = qgrid, 
-                              data = data, 
-                              id_col = 'clean_hash',
-                              deduplicate = FALSE,
-                              output_folder = outdir),
-           pattern = map(qgrid),
-           format = 'file'),
-
-tar_target(bids, compile_blocks(blocks = blocks, 
-                                output_folder = outdir, 
-                                chk_size = 10000), format = 'file'),
-tar_target(bid_files, bids)
-)
-#> Establish _targets.R and _targets_r/targets/block-2.R.
-```
-
-At the end of the blocking process, the `bid_files` target links to a
-series of data.frames (saved as parquet files) that consist of the pairs
-that be assessed for match probability.
-
 ## Predicting Match Scores
 
-### Using the ensemble
+### Overview
 
 For all blocked pairs, a match score is generated and those where the
 match probability is \>.05 are saved. As described above, pairs are
 first evaluated by the lasso screening models and those that are within
 the range specified by `bounds` (default: $$.01 - .99$$) are further
 evaluated by the overall ensemble.
+
+### Targets
+
+#### Predicted links
+
+Each chunk of pairs (as stored in the `bid_files` series of targets) is
+loaded and converted into a model frame (via the `make_model_frame`
+function within `predict_links`). Once in model frame format,
+predictions from the linkage ensemble (i.e. `model_path`)
 
 ``` r
 tar_target(preds,
@@ -884,15 +974,16 @@ tar_target(preds,
 #> Establish _targets.R and _targets_r/targets/z-predictions.R.
 ```
 
-### Fixed links
+#### Fixed (a-priori) links
 
 Depending on the linkage problem, there may be certain pairs of records
 that must be considered matches, regardless of the match score. In this
 example, records with the same source system and source id, but
 different hash ids are automatically considered matches (they are
-ignored during the blocking step, but added here). The
+excluded during the blocking step, but added here). The
 [fixed_links](R/fixed_links.R) function adds those records to the
-results set as exact matches (i.e. match score of 1).
+results set as exact matches (i.e. match score of 1) via the `fixed`
+target.
 
 ``` r
 tar_target(fixed, 
@@ -907,15 +998,28 @@ tar_target(fixed,
 #> Establish _targets.R and _targets_r/targets/fixed-links.R.
 ```
 
+### Odds and Ends
+
 ## Evaluation and Cutoffs
+
+### Overview
 
 The ensemble produces match scores on a scale of 0 to 1. However,
 whether or not two records are a “match” is a binary value and therefore
-the scores must be discretized. To find a good cutoff point, 3 rounds of
-5-fold cross validation are used. For each fold, the entire ensemble is
-refit via [`cv_refit`](R/cv_refit.R)(although the hyperparameters are
-inherited from the main model) on 4/5ths of the training data, and the
-cutoff that optimizes accuracy is computed.
+the scores must be discretized. The targets in this section compute some
+cross-validated results that are then combined together to estimate a
+cutpoint to maximize accuracy.
+
+### Targets
+
+#### Refit models with cross-validation
+
+To find a good cutoff point, 3 rounds of 5-fold cross validation are
+used. For each fold, the entire ensemble is refit via
+[`cv_refit`](R/cv_refit.R)(although the hyperparameters are inherited
+from the main model) on 4/5ths of the training data, and the cutoff that
+optimizes accuracy is computed. `cutoff_df` in combination with
+`tar_map` creates a series of targets with a `cv_co` prefix.
 
 ``` r
 i = 3
@@ -943,13 +1047,23 @@ cv_cutoffs = list(
 #> Establish _targets.R and _targets_r/targets/b-cutoffs.R.
 ```
 
-### Identifying the cutpoint and OOS statistics
+#### Identifying the cutpoint and OOS statistics
 
 The cross-validated results are collected and summarized via the
-[`identify_cutoff`](R/identify_cutoff.R) function during the `cutme`
-target. The results are analyzed to determine a cutpoint that maximizes
-accuracy. Out of sample fit statistics are also generated during this
-step.
+[`identify_cutoff`](R/identify_cutoff.R) function to create the `cutme`
+target using the `cv_co` targets (i.e. `cv_cutoffs`) as the primary
+input to this step. The results are analyzed to determine a cutpoint
+that maximizes accuracy. Out of sample fit statistics are also generated
+during this step. The `yardstick` package is used to create the output
+metrics.
+
+The resulting `cutme` target contains three items:
+
+1.  A cut-point at the value of maximum accuracy, as computed from the
+    cross validation process (the `cv_co` set of products)
+2.  Summarized cross-validation results (when `Iteration == 0` in the
+    resulting data.frame) and the constituent parts
+3.  Out of sample fit metrics.
 
 ``` r
 list(
@@ -972,13 +1086,9 @@ tarchetypes::tar_combine(
 #> Establish _targets.R and _targets_r/targets/z-cutoffs.R.
 ```
 
-The resulting `cutme` target contains three items:
+### Odds and Ends
 
-1.  A cut-point at the value of maximum accuracy, as computed from the
-    cross validation process (the `cv_co` set of products)
-2.  Summarized cross-validation results (when `Iteration == 0` in the
-    resulting data.frame) and the constituent parts
-3.  Out of sample fit metrics.
+#### Cutme object
 
 Reviewing the results, especially the out of sample fit metrics will
 give a good indication on how the model is performing. An example table
@@ -994,13 +1104,25 @@ is reproduced below:
 
 ## From 1:1 links to networks
 
+### Overview
+
 Once a set of links at the hash id level have been identified, they must
 be aggregated to the level of interest – in this case, source id. This
 is done by organizing all the individual 1:1 links together into a
-series of networks and aggregating those networks by source id. The
-[`compile_links`](R/compile_links.R) function does this two step
-aggregation process and computes some metrics at each scale (e.g. the
-hash id level and then the source id level).
+series of networks and aggregating those networks by source id.
+
+### Targets
+
+#### Compiling 1:1 links into clusters
+
+The [`compile_links`](#0) function aggregates the 1:1 links from the
+`preds` and `fixed` targets into clusters/networks and computes some
+metrics at each scale (e.g. the hash id level and then the source id
+level). The resulting target, `components` consists of a summary file (a
+subset is reproduced below) as well as the data frame that converts
+`clean_hash` into a `final_comp_id` which represents the ID of the
+cluster. All rows with the same `final_comp_id` are considered to
+represent the same person.
 
 ``` r
 tar_target(components, 
@@ -1015,8 +1137,32 @@ tar_target(components,
 #> Establish _targets.R and _targets_r/targets/compile-components.R.
 ```
 
+### Odds and Ends
+
+#### Example results from `components`
+
+The first item in the `components` target is the data frame that
+converts `clean_hash`es back into `source_system`-`source_id`
+combinations and then finally into a final identifier: `final_comp_id`.
+A subset of the table is reproduced below. The `final_comp_id`s are not
+inherently deterministic between versions of the models/results – so the
+same collection of records may have a different id between versions.
+
+``` r
+knitr::kable(head(load_target('components', 1)))
+```
+
+| clean_hash | final_comp_id | source_system | source_id | first_level_id |
+|:---|:---|:---|:---|:---|
+| 62fe05da67ded8f2bea61c5a2ae1d5b4 | 1_1 | System 1 | 0_100 | 1 |
+| 35ee1cc1471040aa3a7188dc1d9e6fef | 1_3 | System 1 | 0_10029 | 1 |
+| 3bccfb77c9dd360d8f4ebdf54b28f595 | 1_3 | System 2 | 0_10029 | 1 |
+| 4a787e1dfee5fb2fbac0fd2c60408f39 | 1_4 | System 1 | 0_10030 | 1 |
+| ae3f5920fcb592cc84f3c31b1b45f328 | 1_4 | System 2 | 0_10030 | 1 |
+| 0f18f44ff69b0710ef001ea0ae69db6b | 1_5 | System 2 | 0_10031 | 1 |
+
 The second item in the output of the `components` target is a summary
-file, that reports the density (# of connects/# of total possible
+file, that reports the density (# of connections/# of total possible
 connections) and size (number of nodes within the cluster). Columns may
 be prefixed with `s#`, where the number refers to the level (each
 increasing level represents a nested subcluster).
@@ -1030,7 +1176,7 @@ increasing level represents a nested subcluster).
 | 1 | 0 | 5824 | 1_9 | 0.038 | 63 | 1_9 | 0.038 | 63 |
 | 1 | 0 | 5824 | 1_10 | 0.032 | 105 | 1_10 | 0.032 | 105 |
 
-### Applying constraints
+#### Applying constraints
 
 While this example does not have any network based constraints, certain
 uses cases may require the implementation of deterministic rules. For
@@ -1041,28 +1187,91 @@ may within a network/cluster of linkages (otherwise, it would imply the
 The implementation of those sorts of rules is probably best done as part
 of the `compile_links` function (or as a new subsequent step).
 
-### Identity Table
+## Final Pipeline
 
-The first part of results stored in `components` target is a file path
-to a parquet file containing the final results: a data frame that
-crosswalks between `clean_hash`, `source_id` & `source_system`, and
-`final_comp_id`. This latter variable is final entity identity. All
-source ids with the same `final_comp_id` can be considered as
-representing the same “person” (or equivalent).
+With all the targets specified, a dependency graph can be generated. It
+shows how all the various targets interact with each other.
 
-As currently implemented, the `final_comp_id`s are not persistent
-between model versions.
-
-| clean_hash | final_comp_id | source_system | source_id | first_level_id |
-|:---|:---|:---|:---|:---|
-| 62fe05da67ded8f2bea61c5a2ae1d5b4 | 1_1 | System 1 | 0_100 | 1 |
-| 35ee1cc1471040aa3a7188dc1d9e6fef | 1_3 | System 1 | 0_10029 | 1 |
-| 3bccfb77c9dd360d8f4ebdf54b28f595 | 1_3 | System 2 | 0_10029 | 1 |
-| 4a787e1dfee5fb2fbac0fd2c60408f39 | 1_4 | System 1 | 0_10030 | 1 |
-| ae3f5920fcb592cc84f3c31b1b45f328 | 1_4 | System 2 | 0_10030 | 1 |
-| 0f18f44ff69b0710ef001ea0ae69db6b | 1_5 | System 2 | 0_10031 | 1 |
-
-# Final Pipeline
+``` mermaid
+graph LR
+  style Legend fill:#FFFFFF00,stroke:#000000;
+  style Graph fill:#FFFFFF00,stroke:#000000;
+  subgraph Legend
+    direction LR
+    xf1522833a4d242c5([""Up to date""]):::uptodate --- xd03d7c7dd2ddda2b([""Stem""]):::none
+    xd03d7c7dd2ddda2b([""Stem""]):::none --- x6f7e04ea3427f824[""Pattern""]:::none
+  end
+  subgraph Graph
+    direction LR
+    x5607a26800187e63(["train_test_data"]):::uptodate --> x33ed306cab814ec5(["training_hash"]):::uptodate
+    xfee8af392695eaee["input_1"]:::uptodate --> x050528f2087f5ab6(["zh"]):::uptodate
+    xe645349da297c10c["input_2"]:::uptodate --> x050528f2087f5ab6(["zh"]):::uptodate
+    x9755545176a05140(["data"]):::uptodate --> x84969cda3107a412["blocks"]:::uptodate
+    x471eae9527634150(["qgrid"]):::uptodate --> x84969cda3107a412["blocks"]:::uptodate
+    xfee8af392695eaee["input_1"]:::uptodate --> x5762811339fd357d(["lh"]):::uptodate
+    xe645349da297c10c["input_2"]:::uptodate --> x5762811339fd357d(["lh"]):::uptodate
+    x71529b40ed4eb343(["cutme"]):::uptodate --> x7a0414717566c114(["cutme_path"]):::uptodate
+    xa65de58f7f180b70(["bid_files"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    x9755545176a05140(["data"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    xa94fb4c0b83ba9a4(["freqs"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    x5762811339fd357d(["lh"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    x050528f2087f5ab6(["zh"]):::uptodate --> x49a047e761f69b68["preds"]:::uptodate
+    x9755545176a05140(["data"]):::uptodate --> x5607a26800187e63(["train_test_data"]):::uptodate
+    xa94fb4c0b83ba9a4(["freqs"]):::uptodate --> x5607a26800187e63(["train_test_data"]):::uptodate
+    x5762811339fd357d(["lh"]):::uptodate --> x5607a26800187e63(["train_test_data"]):::uptodate
+    xd7594ee14f5d1b90(["train_input"]):::uptodate --> x5607a26800187e63(["train_test_data"]):::uptodate
+    x050528f2087f5ab6(["zh"]):::uptodate --> x5607a26800187e63(["train_test_data"]):::uptodate
+    x72b796a43fd7d371(["screener"]):::uptodate --> x66e437f53ff04cfe(["submod_svm"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x66e437f53ff04cfe(["submod_svm"]):::uptodate
+    x27b62fd0d7134fa9(["tfolds"]):::uptodate --> x66e437f53ff04cfe(["submod_svm"]):::uptodate
+    x9043e9d6bef6a839(["model"]):::uptodate --> xaccaa1fc5d24385e(["model_path"]):::uptodate
+    x9755545176a05140(["data"]):::uptodate --> xa94fb4c0b83ba9a4(["freqs"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x72b796a43fd7d371(["screener"]):::uptodate
+    x72b796a43fd7d371(["screener"]):::uptodate --> x9043e9d6bef6a839(["model"]):::uptodate
+    x9ac3e268f1e67823(["submod_rf"]):::uptodate --> x9043e9d6bef6a839(["model"]):::uptodate
+    x66e437f53ff04cfe(["submod_svm"]):::uptodate --> x9043e9d6bef6a839(["model"]):::uptodate
+    x0327a91a36b8b78a(["submod_xg"]):::uptodate --> x9043e9d6bef6a839(["model"]):::uptodate
+    x1d906206b5b14e1d(["bids"]):::uptodate --> xa65de58f7f180b70(["bid_files"]):::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> xe829d9cc8a3fbb5a(["cv_co_1"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> xe829d9cc8a3fbb5a(["cv_co_1"]):::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> x33ce00852b070d6b(["cv_co_2"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x33ce00852b070d6b(["cv_co_2"]):::uptodate
+    x9755545176a05140(["data"]):::uptodate --> xd7594ee14f5d1b90(["train_input"]):::uptodate
+    x5607a26800187e63(["train_test_data"]):::uptodate --> xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate
+    x33ed306cab814ec5(["training_hash"]):::uptodate --> xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> x645767fb4734ee1d(["cv_co_3"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x645767fb4734ee1d(["cv_co_3"]):::uptodate
+    x72b796a43fd7d371(["screener"]):::uptodate --> x0327a91a36b8b78a(["submod_xg"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x0327a91a36b8b78a(["submod_xg"]):::uptodate
+    x27b62fd0d7134fa9(["tfolds"]):::uptodate --> x0327a91a36b8b78a(["submod_xg"]):::uptodate
+    xfee8af392695eaee["input_1"]:::uptodate --> x9755545176a05140(["data"]):::uptodate
+    xe645349da297c10c["input_2"]:::uptodate --> x9755545176a05140(["data"]):::uptodate
+    x72b796a43fd7d371(["screener"]):::uptodate --> x9ac3e268f1e67823(["submod_rf"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x9ac3e268f1e67823(["submod_rf"]):::uptodate
+    x27b62fd0d7134fa9(["tfolds"]):::uptodate --> x9ac3e268f1e67823(["submod_rf"]):::uptodate
+    x71529b40ed4eb343(["cutme"]):::uptodate --> x9662f7590fc15a9b(["components"]):::uptodate
+    x9755545176a05140(["data"]):::uptodate --> x9662f7590fc15a9b(["components"]):::uptodate
+    x125711b5fae4f13e(["fixed"]):::uptodate --> x9662f7590fc15a9b(["components"]):::uptodate
+    x49a047e761f69b68["preds"]:::uptodate --> x9662f7590fc15a9b(["components"]):::uptodate
+    x84969cda3107a412["blocks"]:::uptodate --> x1d906206b5b14e1d(["bids"]):::uptodate
+    x9755545176a05140(["data"]):::uptodate --> x125711b5fae4f13e(["fixed"]):::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> x125711b5fae4f13e(["fixed"]):::uptodate
+    xe829d9cc8a3fbb5a(["cv_co_1"]):::uptodate --> x71529b40ed4eb343(["cutme"]):::uptodate
+    x33ce00852b070d6b(["cv_co_2"]):::uptodate --> x71529b40ed4eb343(["cutme"]):::uptodate
+    x645767fb4734ee1d(["cv_co_3"]):::uptodate --> x71529b40ed4eb343(["cutme"]):::uptodate
+    xaccaa1fc5d24385e(["model_path"]):::uptodate --> x71529b40ed4eb343(["cutme"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x71529b40ed4eb343(["cutme"]):::uptodate
+    xa5a0078967d8482b(["input_1_files"]):::uptodate --> xfee8af392695eaee["input_1"]:::uptodate
+    x7f2c265f651235ec(["input_2_files"]):::uptodate --> xe645349da297c10c["input_2"]:::uptodate
+    x72b796a43fd7d371(["screener"]):::uptodate --> x27b62fd0d7134fa9(["tfolds"]):::uptodate
+    xc3fa1bcc9aba0cdd(["test_train_split"]):::uptodate --> x27b62fd0d7134fa9(["tfolds"]):::uptodate
+  end
+  classDef uptodate stroke:#000000,color:#ffffff,fill:#354823;
+  classDef none stroke:#000000,color:#000000,fill:#94a4ac;
+  linkStyle 0 stroke-width:0px;
+  linkStyle 1 stroke-width:0px;
+```
 
 # Odds and ends
 
