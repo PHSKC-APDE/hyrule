@@ -405,7 +405,7 @@ Blocking creates the list of pairs to evaluate for match scores. In this impleme
 
 #### Blocking rules
 
-Blocking rules are specified as DuckDB friendly SQL statements and refer to a `l` and a `r` dataset. In this implementation, both `l` and `r` reference the `data` target. That is, `data`, as the list of records from all the input data systems is being compared against itself. Internally, there are constraints that prevent transitive repetition (e.g., only one of B - A or A - B will be kept) of possible pairs as well as an option to (dis)allow within source system linkage. A brief description of how to interpret the rules is provided in the Odds and Ends part of this section.
+Blocking rules are specified as DuckDB friendly SQL statements and refer to a `l`eft and a `r`ight dataset – a convenience to get the SQL to work. In this implementation, both `l` and `r` refer to the `data` target. A brief description of how to interpret the rules is provided in the Odds and Ends part of this section.
 
 The `make_block_rules` function takes the specified rules, does some additional SQL processing/writing, and organizes them into a data.frame (the `qgrid` target). The use of `tar_group_by` (with `qid` as the by variable) means that the next target that depends on `qgrid` will execute once per row (analogous to how `tar_map` is used in the Model Specification section of this document).
 
@@ -428,7 +428,7 @@ Once the blocking rules have been properly formatted and prepared, they are comp
 
 Once the record pairs that meet at least one blocking rules are identified (the `blocks` target), those pairs are appended together, de-duplicated, and split into equal size data frames as the `bids` target (with `compile_blocks` doing the work). The file paths are then entered into the pipeline via the `bid_files` target so that the pipeline behaves. The resulting pairs will be evaluated for matchiness by the record linkage model and are split into chunks to facilitate [parallelized computation (if used/set up)](https://books.ropensci.org/targets/performance.html#parallel-processing).
 
-Note: records from the same source system with the same source id are automatically excluded from final list of evaluation pairs as they will be added as fixed links by a later step.
+Note: records from the same source system with the same source id are automatically excluded from final list of evaluation pairs as they will be added as fixed links by a later step. Additionally, there are constraints that prevent transitive repetition (e.g., only one of B - A or A - B will be kept) of possible pairs.
 
 ```{targets block-2}
 list(

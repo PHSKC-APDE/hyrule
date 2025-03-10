@@ -707,14 +707,10 @@ the linkage model.
 #### Blocking rules
 
 Blocking rules are specified as DuckDB friendly SQL statements and refer
-to a `l` and a `r` dataset. In this implementation, both `l` and `r`
-reference the `data` target. That is, `data`, as the list of records
-from all the input data systems is being compared against itself.
-Internally, there are constraints that prevent transitive repetition
-(e.g., only one of B - A or A - B will be kept) of possible pairs as
-well as an option to (dis)allow within source system linkage. A brief
-description of how to interpret the rules is provided in the Odds and
-Ends part of this section.
+to a `l`eft and a `r`ight dataset – a convenience to get the SQL to
+work. In this implementation, both `l` and `r` refer to the `data`
+target. A brief description of how to interpret the rules is provided in
+the Odds and Ends part of this section.
 
 The `make_block_rules` function takes the specified rules, does some
 additional SQL processing/writing, and organizes them into a data.frame
@@ -758,7 +754,9 @@ up)](https://books.ropensci.org/targets/performance.html#parallel-processing).
 
 Note: records from the same source system with the same source id are
 automatically excluded from final list of evaluation pairs as they will
-be added as fixed links by a later step.
+be added as fixed links by a later step. Additionally, there are
+constraints that prevent transitive repetition (e.g., only one of B - A
+or A - B will be kept) of possible pairs.
 
 ``` r
 list(
