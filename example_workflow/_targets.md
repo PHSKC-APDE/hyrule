@@ -2,6 +2,7 @@
 
 
 - [About](#about)
+  - [On this implementation](#on-this-implementation)
   - [Using machine learning to do record
     linkage](#using-machine-learning-to-do-record-linkage)
 - [Set up](#set-up)
@@ -25,13 +26,34 @@ This document is an example implementation of machine learning record
 linkage within a [targets
 workflow](https://books.ropensci.org/targets/). While it is designed to
 be a runnable pipeline, the primary goal of this example is to provide
-ideas and show options that analysts can adapt to their own projects.
+ideas and show options that others can adapt to their own projects.
 
 The funding and inspiration for this document derives from the NO HARMS
 grant conducted at Public Health - Seattle & King County and funded by
 the CDC. The pipeline and methods described below are heavily influenced
-by the NO HARMS pipeline, but are intended to be more generalized and
-flexible.
+by the New Opportunities for Health and Resilience Measures for Suicide
+Prevention (NO HARMS) pipeline, but are intended to be more generalized
+and flexible.
+
+## On this implementation
+
+While this example pipeline demonstrates a classic linkage between two
+datasets, the methods can be applied to any number of datasets. The NO
+HARMS project from which this pipeline comes from linked and
+deduplicated \>10 administrative datasets of varying size and data
+density.
+
+The number of input datasets can be scaled up infinitely (contingent on
+computational constraints), although there is a potentially trade-off
+between standardization and accuracy – as a multi-dataset model may have
+a lower ceiling than a series of 1:1 dataset models. On the other hand,
+a multi-dataset approach more naturally allows for the application of
+relationships “learned” from a high data density datasets to lower
+density ones. Also, one big model is likely easier to implement and run
+than a bunch of smaller specialized ones.
+
+A single dataset being linked against itself is a method of
+deduplication.
 
 ## Using machine learning to do record linkage
 
@@ -39,8 +61,8 @@ flexible.
 
 Record linkage (aka entity resolution) is the process by which records
 within and/or between datasets are analyzed and grouped together such
-that they (ideally) represent a single entity (e.g. a person). [(Almost)
-all of entity
+that they (ideally) represent a single entity (e.g., a person).
+[(Almost) all of entity
 resolution](https://www.science.org/doi/full/10.1126/sciadv.abi8021) and
 the documentation for the
 [Splink](https://moj-analytical-services.github.io/splink/topic_guides/topic_guides_index.html)
@@ -51,29 +73,30 @@ description of record linkage and its variations.
 
 1.  Machine learning (and most regression-esque approaches) are
     relatively flexible. If you can convert your problem into a series
-    of rows (e.g. whether two records match) with some predictor
+    of rows (e.g., whether two records match) with some predictor
     variables – you can fit your model. Although the flexible interface
     does occasionally mean it takes longer to get started, users get a
-    lot more runway – especially when they want to be clever and/or
-    create customized predictors. For example, this workflow compares
-    the address histories between two records to determine the minimum
-    observed geographic distance which is used a predictor. This type of
-    thing is difficult to encode in a probabilistic interface.
+    lot more – especially when they want to be clever and/or create
+    customized predictors. For example, this workflow compares the
+    address histories between two records to determine the minimum
+    observed geographic distance, which is then used a predictor. This
+    type of variable is difficult to encode in a probabilistic
+    interface.
 2.  Ensembling methods (which flow naturally from a regression/machine
     learning type approach) allow users to employ multiple model
     families (and their various permutations) to generate the final
     match score. In the ideal case, each model will be good at a
     particular part of the overall problem, and then the whole of the
     models will be greater than the sum of the parts (or at least,
-    better than an individual part). If nothing else,, probabilistic
+    better than an individual part). If nothing else, probabilistic
     approaches can be used within an overall ensemble.
 3.  Any good record linkage project is going to require some manner of
-    verifying if the resulting match determinations are any good
-    (e.g. is A a link to B). Since the “hassle” of creating a manually
-    labeled training dataset already needs to get done – users might as
-    well consider fitting some models on it. In practice, only a few
-    hundred labeled pairs (maybe 2 - 3 hours of work) is required to get
-    a ensemble up and running.
+    verifying if the resulting match determinations are any good (e.g.,
+    is A a link to B). Since the “hassle” of creating a manually labeled
+    training dataset already needs to get done – users might as well
+    consider fitting some models on it. In practice, only a few hundred
+    labeled pairs (maybe 2 - 3 hours of work) is required to get a
+    ensemble up and running.
 
 ### Useful Concepts
 
@@ -88,11 +111,11 @@ methodological concepts:
     outputs all interact/flow into each other. Once the pipeline is
     specified, the targets package uses static code analysis (and other
     tricks) to determine how to keep the pipeline internally consistent
-    and up to date. Via some partner packages
-    (e.g. [`crew`](https://github.com/wlandau/crew)), a targets pipeline
-    can be computed in parallel fairly easily as the full dependency
-    chain is pre-specified.
-2.  Data manipulation and storage: most data tasks (e.g. cleaning,
+    and up to date. Via some partner packages (e.g.,
+    [`crew`](https://github.com/wlandau/crew)), a targets pipeline can
+    be computed in parallel fairly easily as the full dependency chain
+    is pre-specified.
+2.  Data manipulation and storage: most data tasks (e.g., cleaning,
     reshaping) are conducted via the
     [`data.table`](https://github.com/Rdatatable/data.table) R-package
     or [duckdb](https://github.com/duckdb/duckdb-r) dialect sql (via the
@@ -115,20 +138,22 @@ methodological concepts:
     regressions](https://en.wikipedia.org/wiki/Lasso_(statistics)) via
     [`glmnet`](https://cran.r-project.org/web/packages/glmnet/index.html)
     are used as a screening model. Overall, the `hyrule` package and the
-    `tidymodels` suite
-    (e.g. [`parnsip`](https://parsnip.tidymodels.org/),
+    `tidymodels` suite (e.g.,
+    [`parnsip`](https://parsnip.tidymodels.org/),
     [`workflows`](https://workflows.tidymodels.org/),
     [`tune`](https://tune.tidymodels.org/),
     [`stacks`](https://stacks.tidymodels.org/), and
     [`yardstick`](https://yardstick.tidymodels.org/)`)` of packages are
-    used the implement the algorithms
-4.  Networks/clusters: Collections of 1:1 matches may aggregate into
-    full-fledged networks and can be analyzed as such.
+    used to implement the algorithms
+4.  Networks/clusters: Collections of 1:1 matches (i.e., when we think
+    two records are the same person) may aggregate into full-fledged
+    networks (i.e., we think several records are the same person) and
+    can be analyzed as such.
     [`igraph`](https://en.wikipedia.org/wiki/Ensemble_learning) is used
     to analyze and adjust the linkage networks.
 5.  [string distance
     metrics](https://journal.r-project.org/archive/2014-1/loo.pdf): Many
-    of the character variable based comparisons (e.g. name similarity)
+    of the character variable based comparisons (e.g., name similarity)
     are string distance metrics. More details can be found here.
     Implementation is done via
     [`DuckDB`](https://duckdb.org/docs/sql/functions/char.html)
@@ -142,10 +167,8 @@ These packages are required to set up the pipeline.
 
 ``` r
 library(targets)
-# library('hyrule')
 library(tarchetypes)
 library(glue)
-# library('sf')
 library('data.table')
 tar_source()
 ```
@@ -189,8 +212,8 @@ The pipeline specified below uses functions and notation from the
 name of the target that is created by conducting an “operation” on a set
 of “inputs”. Sometimes, functions from the `tarchetypes` package are
 employed. These generally follow the same convention of `tar_target`,
-but are used to specific types of inputs (e.g. file paths) and/or
-classes of target generate (e.g. make a new target by some set of
+but are used to specific types of inputs (e.g., file paths) and/or
+classes of target generate (e.g., make a new target by some set of
 parameters).
 
 ### Section overview
@@ -257,8 +280,8 @@ within parquet files for location and zip code respectively. The
 `create_location_history` and `create_history_variable` functions
 compile the unique list of locations (or ZIP code) by `source_system`
 and `source_id`. The resulting information is used later when
-constructing list intersection flags for the model frame (e.g. these two
-records have been observed at the same location).
+constructing list intersection flags for the model frame (e.g., these
+two records have been observed at the same location).
 
 ``` r
 list(
@@ -294,9 +317,16 @@ list(
 
 #### Prepare frequency variables
 
+Predictor variables constructed from the scaled relative frequency of
+certain identifiers (e.g. first name) to can be used to account for how
+common values may provide less information than less common ones.
+Including these types of variables, as discussed in greater detail
+below, is an attempt to capture the intuition that “John” = “John” is
+probably less predictive than “Unique” = “Unique” for a pair of records.
+
 `freqs` is a series of data frames saved as `.parquet` files that
-contain scaled relative frequency by value within the variables
-(e.g. `dob_clean`) specified in the column argument for
+contain scaled relative frequency by value within the variables (e.g.,
+`dob_clean`) specified in the column argument for
 [`create_frequency_table`](R/create_frequency_table.R).
 
 ``` r
@@ -351,16 +381,18 @@ Within the `init_data` function, the following steps occur:
     stripped of non-character values and common prefixes/suffixes are
     removed. [`hyrule::remove_spaces`](../R/utilities.R) then removes
     any white space characters.
-2.  Date of birth is converted into a date format and restricted to be
+2.  Certain “junk” names are set to NA.
+3.  Date of birth is converted into a date format and restricted to be
     from 1901 to the current year.
-3.  Sex is converted into a standard character column ( e.g. ‘Male’ and
+4.  Sex is converted into a standard character column ( e.g., ‘Male’ and
     ‘Female’ is converted to ‘M’ and ‘F’). Anything not in those two
-    categories is set to NA.
-4.  Some SSN cleaning code is available as comments. This code, if
+    categories is set to NA. Depending on your data availability and/or
+    use case, users may want to modify this logic to account for other
+    gender data values.
+5.  Some SSN cleaning code is available but commented out. This code, if
     applied, converts SSNs to strings of only numerics, removes common
     junk SSNs, and converts things to a standardized 9 digit number (as
     a character column to allow for SSNs beginning with 0).
-5.  Certain “junk” names are set to NA.
 6.  Rows with too much missing information are dropped from the dataset
 7.  Rows with partial data density are filled in using data from other
     rows within the same source id. For example, if rows 1, 2 and 3 all
@@ -374,18 +406,9 @@ should not be considered immutable or complete. Each project will likely
 require its own data cleaning routines as data can be messy in nearly
 infinite ways.
 
-#### Data cleaning
-
 [Documentation from the splink
 package](https://moj-analytical-services.github.io/splink/demos/tutorials/01_Prerequisites.html)
-describes some good general principles of data cleaning. Some additional
-items include:
-
-1.  Common “junk” names (e.g. John Doe) should be removed. Reviewing the
-    names with high frequency is generally a good way to find “junk”
-    names.
-2.  Limit date of birth values to reasonable limits (e.g. 1900 - current
-    year).
+describes some good general principles of data cleaning.
 
 #### `clean_hash`
 
@@ -397,26 +420,12 @@ nest variations of primary variables within a given source system and
 source id combination.
 
 Practically, using the hash (instead of source id) as the low-level
-identifier instead of source id allows for more data available by source
-id to be leveraged to improve the linkage process. For example, if
-source ID sometimes has Richard as the first name and sometimes as Rick,
-then both permutations can be used for blocking and evaluating possible
-links to identify more matches.
-
-Handling the data in this way (row based) instead of aggregating thing
-into list-columns and using set operations also improves computational
-efficiency – especially for blocking.
-
-#### Frequency variables
-
-Frequency variables are useful to include within the modelling framework
-as they can adjust/downweight common names. For example, “John Smith”
-and “John Smith” likely is less informative than “Unique Name” and
-“Unique Name” because John Smith is more common. Using the
-[`create_frequency_table`](R/create_frequency_table.R) function, any
-variable can be the source of a frequency variable. For a given input
-value (e.g. John), the resulting relative frequency value computed and
-then scaled between 0 and 1.
+identifier allows for more data available by source id to be leveraged –
+even if it conflicts with other records within the same source id. For
+example, a given source id may include an entry with the name “Richard”
+while a later entry is “Rick”. Using both permutations will facilitate
+more candidate pairs for evaluation – reducing the chance of a false
+negative (while hopefully not increasing false positives too much).
 
 #### Example “input” data
 
@@ -449,8 +458,13 @@ the `data` target is a “cleaned” version of `input_1` and `input_2`.
 
 ### Overview
 
-This section combines combines manually labeled (non-)matches the
-cleaned data and variables from the Data Preparation section.
+This section combines cleaned data and variables from the Data
+Preparation section with manually labeled (non-)matches to create the
+model frame from which the ensemble will be trained (and evaluated)
+with.
+
+The minimal structure of the labeled pairs is described in the odds and
+ends section.
 
 ### Targets
 
@@ -461,11 +475,11 @@ within `hyrule` package. However, this dataset specifies records as a
 combination of `source_system` and `source_id` rather than as
 `clean_hash`. `convert_sid_to_hid` converts `pairs` so that the records
 are identified by `clean_hash` and the results are stored (as a link to
-a parquet file) in `train_input`
+a parquet file) in `train_input.`
 
 Note: In most workflows, this step will not be required as the training
 data will be natively at the hash level. Instead, most users will want
-to populate `train_input` with a set of loadable files (e.g. csv) that
+to populate `train_input` with a set of loadable files (e.g., csv) that
 can be registered with `tarchetypes::tar_files_input` and/or some of
 function that loads the labeled pairs from storage. As long as
 `train_input` ultimately is a path to a parquet file with at least three
@@ -513,12 +527,15 @@ f = pair ~ dob_year_exact + dob_mdham + gender_agree +
 #### Build training model frame
 
 The [`compile_training_data`](R/compile_training_data.R) function loads
-and standardizes labeled pairs, uses the `make_model_frame` function
-internally to go from labeled pairs to “training data.” Before saving
-the results, some sanity checks are performed to ensure that too many of
-the labeled pairs get dropped due to missing data or some other set of
-data gremlins. The results are stored in a parquet file via the
-`train_test_data` target.
+and standardizes labeled pairs and uses the `make_model_frame` function
+internally to go from labeled pairs to “training data”. Before saving
+the results, some sanity checks are performed to ensure that not too
+many of the labeled pairs get dropped due to missing data or some other
+set of data gremlins. The results are stored in a parquet file via the
+`train_test_data` target. As written, `compile_training_data` assumes
+location history, zip history, and various frequency tabulations exist.
+Users who do not want to (or cannot) use those bits of information will
+have to update the function (and not just the invocation) accordingly.
 
 Note: A detailed description of the
 [`make_model_frame`](R/make_model_frame.R) function that combines
@@ -584,15 +601,16 @@ list(
 #### Training data format
 
 Labeled pairs to be used for training must be organized into a data
-frame with three columns: `id1`, `id2`, and `pair`. The first two
-columns specify pairs of records while the `pair` column is a binary
-flag indicating whether the two (hash) ids are a match (1) or not (0).
-For example:
+frame with three columns: `id1`, `id2`, and `pair`. `id1` and `id2` in
+combination refer to the pair of records that was evaluated while the
+`pair` column indicates match status (0 for no match, 1 for match).
+`id1` and `id2` must be filled with values that reference the low-level
+row identifier (e.g., `clean_hash`)
 
-| id1 | id2 | pair |
-|----:|----:|-----:|
-|   1 |   3 |    0 |
-|   2 |   4 |    1 |
+| id1  | id2  | pair |
+|:-----|:-----|-----:|
+| a123 | z12b |    1 |
+| ashd | qaf4 |    0 |
 
 #### Cleaning the labeled pairs
 
@@ -600,9 +618,11 @@ The `compile_training_data` function that is the core of the process
 that creates the `train_test_data` target enforces a few consistencies
 on the labeled pairs while creating the model frame:
 
-1.  `id1` and `id2` are standardized such that `id1` \< `id2`.
+1.  `id1` and `id2` are standardized such that `id1` \< `id2`. Note,
+    that inequality operations (e.g. `<`) work on character values.
+    Roughly, its based on alphabetical ordering.
 2.  Duplicates are dropped
-3.  Contradictions (e.g. the first wave of training data says A !=B
+3.  Contradictions (e.g., the first wave of training data says A !=B
     while the second set says A = B) are reconciled by taking the last
     observed value for a given `id1` and`id2` combination
 4.  The records implied by the value of `id1` and/or `id2` must still
@@ -613,14 +633,19 @@ on the labeled pairs while creating the model frame:
 #### Example rows from `train_test_data`
 
 ``` r
-load_target(train_test_data) |>
+load_target('train_test_data') |>
   head() |>
   knitr::kable()
 ```
 
-| x                                                               |
-|:----------------------------------------------------------------|
-| Error in eval(expr, envir) : object ‘train_test_data’ not found |
+| id1 | id2 | pair | dob_year_exact | dob_mdham | gender_agree | first_name_jw | last_name_jw | name_swap_jw | complete_name_dl | middle_initial_agree | last_in_last | first_name_freq | last_name_freq | zip_overlap | exact_location | missing_zip | missing_ah |
+|:---|:---|:---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 00426cbd407157085b731609206c879b | 0654a68cf07ef09cbb21a154ee086783 | 1 | 1 | 0.00 | 1 | 0.4592593 | 1.0000000 | 0.5740741 | 0.6363636 | 1 | 0 | 0.9815 | 0.1786 | 0 | 1 | 0 | 0 |
+| 00602eeea0e12ba9cc8417b2cf1fe0c0 | 35d350e69b7189670cf7ded53495ec87 | 0 | 1 | 0.00 | 1 | 0.0000000 | 0.5079365 | 0.5523810 | 0.4615385 | 1 | 0 | 1.0000 | 0.1786 | 0 | 1 | 0 | 0 |
+| 006102639d754f0c215b163c31fdd2ec | cd96592ebc7ca2a21cec870eb5ca6c90 | 1 | 1 | 0.00 | 1 | 0.1333333 | 0.4888889 | 1.0000000 | 0.4545455 | 1 | 0 | 0.1574 | 0.2143 | 0 | 1 | 0 | 0 |
+| 00d19cd85f59e898f819bc73e469d254 | 638c3cdf9fbc8d2a79bfc0d2688b06f1 | 0 | 0 | 0.50 | 1 | 1.0000000 | 0.5583333 | 0.5444444 | 0.8666667 | 0 | 0 | 0.0648 | 0.0179 | 0 | 0 | 0 | 0 |
+| 00e4d82a5b5565baef8c87f55e6036d6 | 57a83a6ce3a48bde4578391f18218e63 | 0 | 0 | 0.75 | 0 | 0.4603175 | 1.0000000 | 1.0000000 | 0.8461538 | 1 | 0 | 0.2222 | 0.1488 | 0 | 0 | 0 | 1 |
+| 00e4d82a5b5565baef8c87f55e6036d6 | 9a1691825c996a699b739926eb414840 | 0 | 0 | 0.75 | 0 | 0.5000000 | 1.0000000 | 1.0000000 | 0.8750000 | 1 | 0 | 0.0185 | 0.1488 | 0 | 0 | 0 | 1 |
 
 #### Making the model frame
 
@@ -645,22 +670,25 @@ frame containing pair level variables.
 For this exercise, the following variables are of interest (and will be
 computed – see below):
 
-1.  `dob_year_exact`: exact match of year of birth
+1.  `dob_year_exact`: binary flag of exact match of year of birth
 2.  `dob_mdham`: hamming distance between month and day of birth
-3.  `gender_agree`: gender explicitly matches
+3.  `gender_agree`: binary flag of an explicit match on gender
 4.  `first_name_jw`: jaro-winkler distance of first names
 5.  `last_name_jw`: jaro-winkler distance of last names
 6.  `name_swap_jw`: jaro-winkler distance of names with first and last
     swapped
 7.  `complete_name_dl`: daimaru-levenstein distance between the full
-    names. Full name is either first + last or first + middle + last.
-    The minimum distance of the two versions is used.
-8.  `middle_initial_agree`: Explicit match of middle initial
-9.  `last_in_last`: where either records’ whole last name is contained
-    in the other one
-10. `first_name_freq`: Scaled frequency tabulation of first names
-11. `last_name_freq`: Scaled frequency tabulation of last names
-12. `zip_overlap`: Binary flag indicating zip code histories ever
+    names scaled by dividing the character length of the longer name.
+    Full name is either first + last or first + middle + last. The
+    minimum distance of the two versions is used.
+8.  `middle_initial_agree`: binary flag indicating an eplicit match of
+    middle initial
+9.  `last_in_last`: binary flag indicating whether either records’ whole
+    last name is contained in the other one
+10. `first_name_freq`: scaled frequency \[0-1\] tabulation of first
+    names
+11. `last_name_freq`: scaled frequency \[0-1\] tabulation of last names
+12. `zip_overlap`: binary flag indicating zip code histories ever
     overlapped (not accounting for time)
 13. `exact_location`: binary flag indicating address histories overlap
     within 3 meters (location only – not spatio-temporal).
@@ -680,8 +708,13 @@ the linkage model.
 
 Blocking rules are specified as DuckDB friendly SQL statements and refer
 to a `l` and a `r` dataset. In this implementation, both `l` and `r`
-reference the `data` target. A brief description of how to interpret the
-rules is provided in the Odds and Ends part of this section.
+reference the `data` target. That is, `data`, as the list of records
+from all the input data systems is being compared against itself.
+Internally, there are constraints that prevent transitive repetition
+(e.g., only one of B - A or A - B will be kept) of possible pairs as
+well as an option to (dis)allow within source system linkage. A brief
+description of how to interpret the rules is provided in the Odds and
+Ends part of this section.
 
 The `make_block_rules` function takes the specified rules, does some
 additional SQL processing/writing, and organizes them into a data.frame
@@ -707,13 +740,13 @@ list(tarchetypes::tar_group_by(qgrid, command = make_block_rules(rules = blockin
 ### Computing and compiling pairs for evaluation
 
 Once the blocking rules have been properly formatted and prepared, they
-are then computed. The `deduplicate` argument in the
+are computed. The `deduplicate` argument in the
 [`make_block`](R/blocking.R) function (`blocks` target) governs whether
 records from the same source system are “allowed” to be included in the
 final set of blocked pairs. Recall that there will be a (sub)target for
 every row in `qgrid`.
 
-Once the record pairs that meet at least on blocking rules are
+Once the record pairs that meet at least one blocking rules are
 identified (the `blocks` target), those pairs are appended together,
 de-duplicated, and split into equal size data frames as the `bids`
 target (with `compile_blocks` doing the work). The file paths are then
@@ -834,7 +867,7 @@ forests, and xgboost gradient boosted machines. The model types have
 been shown to be effective in other uses cases and the underlying
 algorithms are sufficiently different from each other that each set of
 submodels might be able to optimize for a different subset of tasks.
-Other model types (e.g. neural nets, logistic regression, etc.) can be
+Other model types (e.g., neural nets, logistic regression, etc.) can be
 added to the ensemble if desired.
 
 ``` r
@@ -1117,7 +1150,7 @@ series of networks and aggregating those networks by source id.
 
 The [`compile_links`](#0) function aggregates the 1:1 links from the
 `preds` and `fixed` targets into clusters/networks and computes some
-metrics at each scale (e.g. the hash id level and then the source id
+metrics at each scale (e.g., the hash id level and then the source id
 level). The resulting target, `components` consists of a summary file (a
 subset is reproduced below) as well as the data frame that converts
 `clean_hash` into a `final_comp_id` which represents the ID of the
