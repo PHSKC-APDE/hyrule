@@ -18,6 +18,7 @@
   - [From 1:1 links to networks](#from-11-links-to-networks)
   - [Final Pipeline](#final-pipeline)
 - [Odds and ends](#odds-and-ends-6)
+  - [Final output](#final-output)
   - [Glossary](#glossary)
 
 # About
@@ -936,7 +937,7 @@ submods = list(
 ### Stacked ensemble model
 
 The sub-models are ensembled together in the `create_stacked_model`
-function using lasso regression. Lasso regression is used because is
+function using lasso regression. Lasso regression is used because it
 “automatically” performs variable selection as part of its fitting
 process. The final linkage model (screening model + submodels +
 ensemble) is stored in the `model` target. The `model` target is then
@@ -971,11 +972,12 @@ tarchetypes::tar_combine(
 
 ### Overview
 
-For all blocked pairs, a match score is generated and those where the
-match probability is \>.05 are saved. As described above, pairs are
-first evaluated by the lasso screening models and those that are within
-the range specified by `bounds` (default: $$.01 - .99$$) are further
-evaluated by the overall ensemble.
+Match score predictions are generated for all pairs created by the
+blocking step. As described above, pairs are first evaluated by the
+lasso screening models and those that are within the range specified by
+`bounds` (default: $$.01 - .99$$) are further evaluated by the overall
+ensemble. All match scores \>.05 are saved (and the ones below the
+threshold are discarded to save space).
 
 ### Targets
 
@@ -1014,7 +1016,8 @@ different hash ids are automatically considered matches (they are
 excluded during the blocking step, but added here). The
 [fixed_links](R/fixed_links.R) function adds those records to the
 results set as exact matches (i.e. match score of 1) via the `fixed`
-target.
+target. Note: The result of the `fixed_links` function should match the
+column structure of the predicted results.
 
 ``` r
 tar_target(fixed, 
@@ -1119,6 +1122,16 @@ tarchetypes::tar_combine(
 
 ### Odds and Ends
 
+#### One vs. many cutpoints
+
+This implementation calculates and uses a single global cutpoint to
+determine whether a pair is a match. There is nothing inherently special
+about a single cutpoint except its easier to implement. Alternative
+implementations/extensions could use multiple situtation cutpoints. For
+example, cutpoints based on data densisty or specific variable
+combinations may be more effective for certain use cases than a single
+threshold.
+
 #### Cutme object
 
 Reviewing the results, especially the out of sample fit metrics will
@@ -1146,14 +1159,43 @@ series of networks and aggregating those networks by source id.
 
 #### Compiling 1:1 links into clusters
 
-The [`compile_links`](#0) function aggregates the 1:1 links from the
-`preds` and `fixed` targets into clusters/networks and computes some
-metrics at each scale (e.g., the hash id level and then the source id
-level). The resulting target, `components` consists of a summary file (a
-subset is reproduced below) as well as the data frame that converts
-`clean_hash` into a `final_comp_id` which represents the ID of the
-cluster. All rows with the same `final_comp_id` are considered to
-represent the same person.
+At this stage, the results consist of of pairs (i.e., 1:1 links) of
+records identified at the `clean_hash` level, whereas the goal is an
+entity identifier that groups records together at the `source_system` -
+`source_id` level (i.e., the atomic unit of the input data systems).
+
+To achieve this, the [`compile_links`](#0) function aggregates the 1:1
+links at the `clean_hash` level from the `preds` and `fixed` targets
+into clusters/networks at the `source_id`-`source_system` level;
+computing some network statistics (density and size) along the way.
+
+Specifically, the function:
+
+1.  Organizes 1:1 links at the `clean_hash` into a series of networks.
+    For example, if A links to B, B links to C, and A, B, C have no
+    other connections, then the resulting network consists of A, B, and
+    C (even though A and C don’t directly match except through B).
+2.  The size and density of the networks created in step 1 are computed.
+    These initial results (and the cluster ID from \#1) are prefixed
+    with `s1_` in the summary output
+3.  Networks where size \> `min_N` and density \< `max_density` are
+    subdivided based on the clustering algorithm specified by the
+    `method` argument. If `recursive` is TRUE, then the subdivision
+    continues until some stopping conditions are met (see the
+    `clusterer` sub-function in the `compile_links` source code). When
+    summary statistics are (re)computed, each level is given an
+    incrementing prefix (e.g., `s2_`, `s3_`, etc.).
+4.  The new set of (sub)networks are aggregated such that each
+    connection is between two `source_id`s instead of `clean_hash`es.
+    This may reconnect networks previously separated by \#3 and/or
+    overrule below threshold match scores. Usually this occurs when a
+    source system - source id contains multiple people but the process
+    must assume its all one entity (since source id is the atomic unit
+    of reporting).
+5.  The (re)organized networks are given unique identifiers and a data
+    frame that crosswalks between `clean_hash`, `source_id`, and a
+    network identifier (`final_comp_id`). More details are provided in
+    the odds and ends section below.
 
 ``` r
 tar_target(components, 
@@ -1163,7 +1205,11 @@ tar_target(components,
              data = data, 
              id_col = 'clean_hash',
              cutpoint = cutme$cutpoint,
-             output_folder = outdir
+             output_folder = outdir,
+             method = 'leiden',
+             min_N = 15,
+             max_density = .4,
+             recursive = FALSE
            ), format = 'file')
 #> Establish _targets.R and _targets_r/targets/compile-components.R.
 ```
@@ -1178,6 +1224,9 @@ combinations and then finally into a final identifier: `final_comp_id`.
 A subset of the table is reproduced below. The `final_comp_id`s are not
 inherently deterministic between versions of the models/results – so the
 same collection of records may have a different id between versions.
+`first_level_id` is also provided which is the initial designation of
+the network before any subdivision via clustering algorithm (it is also
+the part before the first `_` in `final_comp_id`.
 
 ``` r
 knitr::kable(head(load_target('components', 1)))
@@ -1194,9 +1243,9 @@ knitr::kable(head(load_target('components', 1)))
 
 The second item in the output of the `components` target is a summary
 file, that reports the density (# of connections/# of total possible
-connections) and size (number of nodes within the cluster). Columns may
+connections) and size (number of nodes within the network). Columns may
 be prefixed with `s#`, where the number refers to the level (each
-increasing level represents a nested subcluster).
+increasing level represents a nested sub-network).
 
 | s1_comp_id | s1_density | s1_size | s2_comp_id | s2_density | s2_size | final_comp_id | final_density | final_size |
 |:---|---:|---:|:---|---:|---:|:---|---:|---:|
@@ -1213,10 +1262,10 @@ While this example does not have any network based constraints, certain
 uses cases may require the implementation of deterministic rules. For
 example, when linking death records to other types of administrative
 information, users may want to enforce a rule that only one death record
-may within a network/cluster of linkages (otherwise, it would imply the
-“person” represented by the collection of records died more than once).
-The implementation of those sorts of rules is probably best done as part
-of the `compile_links` function (or as a new subsequent step).
+may within a network of linkages (otherwise, it would imply the “person”
+represented by the collection of records died more than once). The
+implementation of those sorts of rules is probably best done as part of
+the `compile_links` function (or as a new subsequent step).
 
 ## Final Pipeline
 
@@ -1305,6 +1354,13 @@ graph LR
 ```
 
 # Odds and ends
+
+## Final output
+
+The first object in the `components` output associates various source
+ids with a `final_comp_id` which is the entity identifier (i.e., if
+`final_comp_id` is the same for two records, then they can be considered
+to represent the same person/entity).
 
 ## Glossary
 

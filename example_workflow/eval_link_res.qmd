@@ -4,21 +4,92 @@ format: gfm
 editor: visual
 ---
 
-## Assumptions
+## About
 
-`tar_make()` has been successfully run
+This document reviews several ways to check the "goodness" of a set of linkage results. The evaluation metrics/approaches come in two main flavors:
+
+1.  Fit statistics generated via cross-validation and out of sample testing
+2.  Summary metrics of the final linkage clusters.
+
+The first approach is entirely quantitative, whereas the second set requires qualitative assessment.
+
+## Setup
+
+Execute the pipeline, if it hasn't already been run/completed.
 
 ```{r}
+targets::tar_make()
+```
+
+Load packages and helper functions.
+
+```{r, warning=FALSE}
 library('data.table',quietly = TRUE, verbose = FALSE)
 library('DBI')
 library('glue')
 library('targets')
 library('ggplot2')
 library('plotly')
+library('hyrule')
 tar_source()
 ```
 
 ## Fit Metrics
+
+The `cutme` target contains three items. The first, `cutpoint`, is the value that is used to discretize match score predictions into "match" and "no match" decisions. The second object, `cv_metrics`, is data.frame of fit metrics computed via several rounds of cross-validation. Finally, `oos_metrics` is a set of fit statistics computed entirely from held out data (i.e., data the model did not "see").
+
+5 metrics are returned in `cv_metrics` and \`oos_metrics:
+
+1.  [Accuracy](https://yardstick.tidymodels.org/reference/accuracy.html): Fraction of predictions that were correct
+2.  [Kappa](https://yardstick.tidymodels.org/reference/kap.html) (kap): accuracy-type metrics normalized by chance expectations.
+3.  [F Measure](https://yardstick.tidymodels.org/reference/f_meas.html?q=f_meas#null) (f_meas): Harmonic mean of precision and recall
+4.  [Mean log loss](https://yardstick.tidymodels.org/reference/mn_log_loss.html) (mn_log_loss)
+5.  [Area under the receiver operator curve](https://yardstick.tidymodels.org/reference/roc_auc.html) (roc_auc): Approximately how good the model is at predicting high scores for true matches relative to true negatives. [See also this link.](https://developers.google.com/machine-learning/crash-course/classification/roc-and-auc)
+
+The table below shows the out of sample fit metrics. In general, you want all metrics except for mean log loss to be as close to 1 (mean log loss should be as low as possible).
+
+```{r}
+knitr::kable(tar_read(cutme)$oos_metrics[, .(.metric, .estimate = round(.estimate,2))])
+```
+
+## Review missed predictions
+
+It can be useful to manually review the labeled pairs (training and test) that the model gets wrong. Qualitative review of these data can suggest approaches to improve the model such as from new training data (i.e., maybe the model is bad at predicting for records with reversed names), new predictor variables, incorrectly manually labelled data, and more.
+
+```{r}
+# Load the pairs
+pairs = lapply(tar_read(test_train_split), function(x) setDT(arrow::read_parquet(x)))
+pairs = rbind(pairs[[1]][, status := 'test'], pairs[[2]][, status := 'train'])
+
+# Load the models
+model = tar_read(model)
+
+# Make predictions
+ppreds = predict(model, pairs)
+
+# Results
+res = pairs[, .(id1, id2, pair, 
+                status, final = ppreds$final, result = ppreds$final >= tar_read(cutme)$cutpoint)]
+res[, correct := pair == factor(result, c(F,T), c(0,1))]
+
+# Subset to incorrect, and screen out examples that are obviously
+# "purposeful" training misclassification
+incorrect = res[correct == F & final >.2 & final <.8]
+
+# Report correctness, by status
+knitr::kable(res[, .N, keyby = .(status, correct)])
+
+```
+
+```{r}
+
+data = setDT(arrow::read_parquet(tar_read(data)))
+example = data[clean_hash %in% c(incorrect[1,id1], incorrect[1, id2])]
+knitr::kable(t(example), 
+             caption = paste0('Example misclassification, score: ', 
+                              incorrect[1,round(final,2)],
+                              ' | pair = ', incorrect[1, pair]))
+```
 
 ## Review Clusters Metrics
 
