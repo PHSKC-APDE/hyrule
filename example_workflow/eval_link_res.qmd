@@ -23,7 +23,7 @@ targets::tar_make()
 
 Load packages and helper functions.
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, message=FALSE}
 library('data.table',quietly = TRUE, verbose = FALSE)
 library('DBI')
 library('glue')
@@ -52,9 +52,9 @@ The table below shows the out of sample fit metrics. In general, you want all me
 knitr::kable(tar_read(cutme)$oos_metrics[, .(.metric, .estimate = round(.estimate,2))])
 ```
 
-## Review missed predictions
+## Missed Predictions
 
-It can be useful to manually review the labeled pairs (training and test) that the model gets wrong. Qualitative review of these data can suggest approaches to improve the model such as from new training data (i.e., maybe the model is bad at predicting for records with reversed names), new predictor variables, incorrectly manually labelled data, and more.
+It is useful to manually review the labeled pairs (training and test) that the model gets wrong. Qualitative review of these data can suggest approaches to improve the model such as new training data, new predictor variables, incorrectly manually labelled data, and more.
 
 ```{r}
 # Load the pairs
@@ -81,6 +81,8 @@ knitr::kable(res[, .N, keyby = .(status, correct)])
 
 ```
 
+An example misclassified pair is presented below. Because these data are fake, the example data below is not particularly illustrative, but the underlying process of examining the labeled pairs the linkage process got wrong will be useful.
+
 ```{r}
 
 data = setDT(arrow::read_parquet(tar_read(data)))
@@ -91,7 +93,11 @@ knitr::kable(t(example),
                               ' | pair = ', incorrect[1, pair]))
 ```
 
-## Review Clusters Metrics
+## Network Metrics
+
+The main output of the linkage process is a series of networks consisting of records that are all linked together in some way. Reviewing these networks, especially ones that are large and sparse, can reveal opportunities for model and training data improvement. For example, large and sparse clusters may indicate new junk names or numeric identifiers (e.g., ssn).
+
+The second part of the `components` target contains a summary of all the networks (including ones created by subdivision) induced as part of the linkage process. The code below loads the target, sorts the results based on final density and subsets to a minimum size.
 
 ```{r}
 summ = setDT(arrow::read_parquet(tar_read(components)[2]))
@@ -104,6 +110,8 @@ knitr::kable(head(summ[final_size > 10]))
 knitr::kable(tail(summ[final_size > 10]))
 ```
 
+The `retrieve_network_info` and `vis_network` functions can be used to visualize the computed networks. Because this document is static, the `vis_network` call has `return_data = T` and as a result a static (gg)plot is produced. Interactive users should instead use `return_data = F` and `vis_network` will return an interactive plotly graph where each node has a tooltip containing the information specified by the `tooltip_cols` argument.
+
 ```{r visnetwork}
 
 # Get a cluster's details
@@ -113,6 +121,17 @@ net = retrieve_network_info(net_id_val = '1_2',
                       result_tab = unlist(c(tar_read(preds), tar_read(fixed))),
                       cutpoint = tar_read(cutme)[1], 
                       identifier_tab = tar_read(data))
+
+# To produce an interactive visualization:
+# vis_network(
+#   net$nodes, 
+#   net$edge, 
+#   tooltip_cols = c('first_name_noblank', 'last_name_noblank', 
+#                    'dob_clean', 'clean_hash'),
+#   labels = 'final_comp_id',
+#   return_data = F)
+
+
 
 vis = vis_network(
   net$nodes, 
