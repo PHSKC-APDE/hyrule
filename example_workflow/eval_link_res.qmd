@@ -1,6 +1,9 @@
 ---
 title: "Evaluating Linkage Results"
-format: gfm
+format: 
+  gfm:
+    toc: true
+    toc-depth: 2
 editor: visual
 ---
 

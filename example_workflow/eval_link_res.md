@@ -1,6 +1,12 @@
 # Evaluating Linkage Results
 
 
+- [About](#about)
+- [Setup](#setup)
+- [Fit Metrics](#fit-metrics)
+- [Missed Predictions](#missed-predictions)
+- [Network Metrics](#network-metrics)
+
 ## About
 
 This document reviews several ways to check the “goodness” of a set of
@@ -23,7 +29,7 @@ targets::tar_make()
 ```
 
     ✔ skipping targets (1 so far)...
-    ✔ skipped pipeline [0.609 seconds]
+    ✔ skipped pipeline [0.61 seconds]
 
 Load packages and helper functions.
 

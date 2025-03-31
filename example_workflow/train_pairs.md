@@ -1,6 +1,11 @@
 # Making Training Pairs
 
 
+- [Starting fresh](#starting-fresh)
+- [hyrule::matchmaker()](#hyrulematchmaker)
+- [Ideas for selecting training data
+  pairs](#ideas-for-selecting-training-data-pairs)
+
 ## Starting fresh
 
 Any good record linkage workflow requires manually labeled pairs of
@@ -96,12 +101,12 @@ knitr::kable(head(selections))
 
 | id1                              | id2                              | final |
 |:---------------------------------|:---------------------------------|------:|
-| 3e548078358f6a9dcdbf15ca60b4adef | 55eb7788c98eb98c07553710ef8ac607 | 0.130 |
-| 066999ce0ea17f769068871955fb496c | 92c3fa4b5f0895d06cafe94eba33e954 | 0.111 |
-| 56188da0e49de4dac0ac35df56bf7a63 | e26ed345d882d12839a3327304e526db | 0.138 |
-| 89de877846c0fd5520c0e83ee288f3c9 | d4aa9de2c7b1c4c4465526f5ed3ab7fc | 0.111 |
-| 9fae90679a33c45f0c63878b5fa4f6b5 | c54ccefddb4f01602410a543da46ba33 | 0.179 |
-| 9ceaad99dd7c586022117170897431f5 | e9983b1d1d2339d3ee3ddd955b4a96fc | 0.134 |
+| e1f76eb9e884d5dae9424a6340ad4a4b | f9b37cc13e357654a9253120a01f5762 | 0.119 |
+| 2f744b27f7e7709ddcc676ed703f1262 | de5e63f40df2427a1c33d8f57aec72d4 | 0.139 |
+| 4c5b3361447e70748a8ca5e2d4637551 | fb226e27c0af282894f6d8369b46610a | 0.164 |
+| 998659a1e449f27115b2ec52eb2de607 | aaf08642601fa5957808b6f4844b1bc0 | 0.162 |
+| 76d5c168d6b35d61b88b3efd4d63c6cc | 9ec04b526db516d267713f42ff04a6a8 | 0.120 |
+| d68dd349b2956bc8352077c04c297ce3 | ed4f33d4a5b2807990c8bb02b7ec31ac | 0.139 |
 
 ``` r
 hist(selections[, final])
