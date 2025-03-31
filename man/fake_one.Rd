@@ -5,7 +5,7 @@
 \alias{fake_one}
 \title{Fake data for linkage testing}
 \format{
-An object of class \code{data.table} (inherits from \code{data.frame}) with 5505 rows and 13 columns.
+An object of class \code{data.table} (inherits from \code{data.frame}) with 5511 rows and 13 columns.
 }
 \usage{
 fake_one

@@ -23,7 +23,7 @@ targets::tar_make()
 ```
 
     ✔ skipping targets (1 so far)...
-    ✔ skipped pipeline [0.61 seconds]
+    ✔ skipped pipeline [0.609 seconds]
 
 Load packages and helper functions.
 

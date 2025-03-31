@@ -1,7 +1,25 @@
-# hyrule
+# Readme
 
-`hyrule` is a package that contains a few routines to facilitate machine
-learning record linkage (MLRL) via ensemble model approach (stacking).
-For now, review [“Getting Started with Hyrule”](Linkage.md) vignette.
 
-    [1] TRUE
+The `hyrule` package contains functions to facilitate record linkage
+(i.e., entity resolution) using machine learning. In the
+example_workflow subdirectory, there is a fully worked out linkage
+pipeline that demonstrates how `hyrule`, along with a few other
+packages, can be combined/used to conduct record linkage.
+
+There are three main vignettes/examples:
+
+1.  [Record Linkage Pipeline](example_workflow/_targets.md): A mostly
+    comprehensive example of a `targets` analysis pipeline for machine
+    learning record linkage. The [\_targets.qmd](_targets.qmd) file uses
+    targets-flavored markdown and can be edited (or stripped for parts)
+    into a record linkage pipeline using “real” data. To “recreate” the
+    document users must first render the .qmd file, execute the pipeline
+    via `tar_make()`, and re-render the .qmd file. The double render is
+    required to populate the parts of the document that rely on
+    completed results.
+2.  [Evaluating results](example_workflow/eval_link_res.md): Opinions
+    and ideas on how to tell if a record linkage is any good
+3.  [Generating new training data](example_workflow/train_pairs.md): A
+    description of some ways to generate effective training data,
+    including a review of the `hyrule::matchmaker()` function/shiny app.

@@ -5,7 +5,7 @@
 \alias{train}
 \title{Training pairs}
 \format{
-An object of class \code{data.table} (inherits from \code{data.frame}) with 200 rows and 3 columns.
+An object of class \code{data.table} (inherits from \code{data.frame}) with 625 rows and 3 columns.
 }
 \usage{
 train

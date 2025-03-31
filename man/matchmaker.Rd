@@ -4,7 +4,15 @@
 \alias{matchmaker}
 \title{A shiny app to facilitate the creation of a manual labelling of matches}
 \usage{
-matchmaker(dir = NULL, p = NULL, data1 = NULL, data2 = NULL, ...)
+matchmaker(
+  dir = NULL,
+  p = NULL,
+  data1 = NULL,
+  data2 = NULL,
+  data_id1 = NULL,
+  data_id2 = NULL,
+  ...
+)
 }
 \arguments{
 \item{dir}{the directory to have the file selector start in}
@@ -14,6 +22,10 @@ matchmaker(dir = NULL, p = NULL, data1 = NULL, data2 = NULL, ...)
 \item{data1}{data.frame of identifiers for pairs}
 
 \item{data2}{data.frame of identifiers for pairs}
+
+\item{data_id1}{column in data1 representing row id. Should be related to the `id1` column in p(airs)}
+
+\item{data_id2}{column in data1 representing row id. Should be related to the `id2` column in p(airs)}
 
 \item{...}{passed to shiny::shinyApp}
 }
