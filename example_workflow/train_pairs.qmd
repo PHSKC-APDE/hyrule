@@ -9,21 +9,21 @@ editor: visual
 
 ## Starting fresh
 
-Any good record linkage workflow requires manually labeled pairs of records as estimating metrics of model performance and deciding on a cutoff threshold requires manually evaluating pairs. Machine learning linkage pipelines have an additional use for these pairs: fitting the match score model(s).
+Any good record linkage workflow requires manually labeled pairs of records to estimate metrics of model performance and to decide on a match threshold. Machine learning linkage pipelines have an additional use for these pairs: fitting the match score model(s).
 
-When beginning a new project, manually labeled pairs for the input datasets are probably not available and need to be created. A good way to select pairs for manual evaluation is to use a model or metric that can serve as an approximate match score and select pairs across the score spectrum. These initial match scores can be estimated through a few (non-comprehensive) mechanisms:
+When beginning a new project, manually labeled pairs for the input datasets are probably need to be created. A good way to select pairs for manual evaluation is to use a model or metric that can serve as an approximate match score and select pairs across the score spectrum. These initial match scores can be estimated through a few (non-comprehensive) mechanisms:
 
-1.  Use predictions from an existing model, either one from another project and/or one trained on fake data. As long as the data cleaning/variable creation approach is sufficiently similiar than the resulting match scores will provide a good first match score estimate. If you are lucky, then maybe that is all you need. The overall idea is to do some bootleg transfer learning.
+1.  Use predictions from an existing model, either one from another project and/or one trained on fake data. As long as the data cleaning/variable creation approach is sufficiently similar the resulting match scores will provide a good first estimate. If you are lucky, maybe that is all you need.
 2.  Use predictions from a probabilistic model like splink. Worst case, you can use the results to generate some training data (or maybe even use it as a predictor). Best case, the probabilistic model is good enough for your use case and you are done with the project early.
-3.  Compute some distance metrics on key variables (e.g., jaro-winkler distance on first name and last name), scale them, and take an average. Assuming the valences are aligned, you'll have a good enough starting point.
+3.  Compute some distance metrics on key variables (e.g., Jaro-Winkler distance on first name and last name), scale them, and take an average. Assuming the valences are aligned, you'll have a good enough starting point.
 
-The goal is to generate pairs across the match score spectrum to fit a first model; about 100 evaluated pairs is enough to get started. While you can get fancy with how you select the pairs for manual evaluation, random sampling within quantiles is usually good enough.
+When generating pairs across the match score spectrum to fit a first model; about 100 - 200 evaluated pairs is enough to get started. While you can get fancy with how you select the pairs for manual evaluation, random sampling within quantiles is a good default approach.
 
 Note: This section assumes you have already completed a first draft of the blocking scheme and therefore have a universe of possible pairs to evaluate. When computing approximate match scores, you don't need to assess all the pairs nor do so in a totally random way. Mostly, you want to evaluate enough pairs to represent the spectrum of possible match scores (as opposed to the distribution of actual match scores).
 
 ### Using a previously fit model
 
-To use a previously fit model that used the example workflow structure, you will need to make the following changes to the workflow:
+To use a previously fit model that used the [example workflow structure](_targets.md), you will need to make the following changes to the workflow:
 
 1.  Make sure the variable creation and dataset cleaning functions are the same/similar.
 2.  Remove/comment out the following targets:
@@ -45,6 +45,8 @@ To use a previously fit model that used the example workflow structure, you will
 With these changes, you should be able to run the workflow up to the `preds` target.
 
 ### An example of selecting initial pairs
+
+The code below demonstrates how to select a set of initial pairs for manual evaluation by using random sampling within quantiles.
 
 ```{r, message=FALSE, warning=FALSE}
 library('targets')
@@ -72,7 +74,13 @@ hist(selections[, final])
 
 ## hyrule::matchmaker()
 
-The `matchmaker` function loads and displays a shiny app to facilitate the labeling of pairs.
+The `matchmaker` function loads and displays a shiny app to facilitate the labeling of pairs. It requires a dataset of "pairs" and corresponding data(sets) to visualize the information for a given pair of records, therefore allowings users to manually assess whether the pair is a match. Difficult cases to judge may require additional investigation outside the scope of the matchmaker app, but the majority of the assessment can be resolved through the app.
+
+Starting the app requires invoking the `matchmaker` function. The function can be executed without supplying any arguments (i.e., `matchmaker()`), but is is probably easier and faster to supply initial values for the `p`, `data1`, `data2`, `data_id1`, and `data_id2` arguments. In turn:
+
+1.  `p` must be a data.frame of pairs for manual evaluation. The input must have at least two columns `id1` and `id2` which uniquely identify a record and references a row in the data inputs.
+2.  `data1` and `data2` are data.frames with similar variables (both name and content) that describe a record (e.g., first name, last name, ZIP). One of the columns (that doesn't have to match with the other) is an ID column that can be referenced to either the `id1` or `id2` column in `p`.
+3.  `data_id1` and `data_id2` are the names for columns in `data1` and `data2` that can serve as a merge variable to `id1` and `id2` in `p`
 
 ```{r, eval = F}
 hyrule::matchmaker(
@@ -120,4 +128,3 @@ While stratified random sampling is a good way to start generating a training da
 3.  Ensure some minimal amount of pairs based on record characteristics - especially when you think those characteristics might correlate with how your predictor variables work. For example, Hispanic folks often have a distinct convention for last names – and a good model should have training data reflecting those permutation. This principle can apply to other characteristics (twins, name changes, etc.) as well. The model will be better if it has "hard" cases to learn from.
 4.  Select pairs from large but low density networks (usually identified from a previous version of results).
 5.  Select pairs near the previous cutpoint. These will likely be "hard" cases.
-

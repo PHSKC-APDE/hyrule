@@ -9,38 +9,36 @@
 ## Starting fresh
 
 Any good record linkage workflow requires manually labeled pairs of
-records as estimating metrics of model performance and deciding on a
-cutoff threshold requires manually evaluating pairs. Machine learning
-linkage pipelines have an additional use for these pairs: fitting the
-match score model(s).
+records to estimate metrics of model performance and to decide on a
+match threshold. Machine learning linkage pipelines have an additional
+use for these pairs: fitting the match score model(s).
 
 When beginning a new project, manually labeled pairs for the input
-datasets are probably not available and need to be created. A good way
-to select pairs for manual evaluation is to use a model or metric that
-can serve as an approximate match score and select pairs across the
-score spectrum. These initial match scores can be estimated through a
-few (non-comprehensive) mechanisms:
+datasets are probably need to be created. A good way to select pairs for
+manual evaluation is to use a model or metric that can serve as an
+approximate match score and select pairs across the score spectrum.
+These initial match scores can be estimated through a few
+(non-comprehensive) mechanisms:
 
 1.  Use predictions from an existing model, either one from another
     project and/or one trained on fake data. As long as the data
-    cleaning/variable creation approach is sufficiently similiar than
-    the resulting match scores will provide a good first match score
-    estimate. If you are lucky, then maybe that is all you need. The
-    overall idea is to do some bootleg transfer learning.
+    cleaning/variable creation approach is sufficiently similar the
+    resulting match scores will provide a good first estimate. If you
+    are lucky, maybe that is all you need.
 2.  Use predictions from a probabilistic model like splink. Worst case,
     you can use the results to generate some training data (or maybe
     even use it as a predictor). Best case, the probabilistic model is
     good enough for your use case and you are done with the project
     early.
-3.  Compute some distance metrics on key variables (e.g., jaro-winkler
+3.  Compute some distance metrics on key variables (e.g., Jaro-Winkler
     distance on first name and last name), scale them, and take an
     average. Assuming the valences are aligned, you’ll have a good
     enough starting point.
 
-The goal is to generate pairs across the match score spectrum to fit a
-first model; about 100 evaluated pairs is enough to get started. While
+When generating pairs across the match score spectrum to fit a first
+model; about 100 - 200 evaluated pairs is enough to get started. While
 you can get fancy with how you select the pairs for manual evaluation,
-random sampling within quantiles is usually good enough.
+random sampling within quantiles is a good default approach.
 
 Note: This section assumes you have already completed a first draft of
 the blocking scheme and therefore have a universe of possible pairs to
@@ -51,8 +49,9 @@ scores (as opposed to the distribution of actual match scores).
 
 ### Using a previously fit model
 
-To use a previously fit model that used the example workflow structure,
-you will need to make the following changes to the workflow:
+To use a previously fit model that used the [example workflow
+structure](_targets.md), you will need to make the following changes to
+the workflow:
 
 1.  Make sure the variable creation and dataset cleaning functions are
     the same/similar.
@@ -78,6 +77,9 @@ With these changes, you should be able to run the workflow up to the
 
 ### An example of selecting initial pairs
 
+The code below demonstrates how to select a set of initial pairs for
+manual evaluation by using random sampling within quantiles.
+
 ``` r
 library('targets')
 library('data.table')
@@ -101,12 +103,12 @@ knitr::kable(head(selections))
 
 | id1                              | id2                              | final |
 |:---------------------------------|:---------------------------------|------:|
-| e1f76eb9e884d5dae9424a6340ad4a4b | f9b37cc13e357654a9253120a01f5762 | 0.119 |
-| 2f744b27f7e7709ddcc676ed703f1262 | de5e63f40df2427a1c33d8f57aec72d4 | 0.139 |
-| 4c5b3361447e70748a8ca5e2d4637551 | fb226e27c0af282894f6d8369b46610a | 0.164 |
-| 998659a1e449f27115b2ec52eb2de607 | aaf08642601fa5957808b6f4844b1bc0 | 0.162 |
-| 76d5c168d6b35d61b88b3efd4d63c6cc | 9ec04b526db516d267713f42ff04a6a8 | 0.120 |
-| d68dd349b2956bc8352077c04c297ce3 | ed4f33d4a5b2807990c8bb02b7ec31ac | 0.139 |
+| 7c9d49bc640e8f8199748809aee2ffe3 | e25e7096d6f88ae0a297cc7d27074583 | 0.183 |
+| dca7482f0cd4589d3ad8b675b52b3e5a | f5623052c6e8b00c5606470a69c75810 | 0.168 |
+| 105aad084ae298e4be701ad39de1dc21 | dfd071236eea479cc6285fbe7f7f9ac5 | 0.158 |
+| 0c3ce62aa5767ac37e1f2b3e606dfe6a | c2c016e800405ea5554b22d4103cce8f | 0.149 |
+| 4606ffa33d6c2fa83decba86e4fe4c2c | 553af9715a1cf40ecc75bd34fd011e32 | 0.148 |
+| 4da410aecba67a34d4aec95440a41469 | 9c223a2cfa82b69afc40531f617db8c9 | 0.133 |
 
 ``` r
 hist(selections[, final])
@@ -117,7 +119,29 @@ hist(selections[, final])
 ## hyrule::matchmaker()
 
 The `matchmaker` function loads and displays a shiny app to facilitate
-the labeling of pairs.
+the labeling of pairs. It requires a dataset of “pairs” and
+corresponding data(sets) to visualize the information for a given pair
+of records, therefore allowings users to manually assess whether the
+pair is a match. Difficult cases to judge may require additional
+investigation outside the scope of the matchmaker app, but the majority
+of the assessment can be resolved through the app.
+
+Starting the app requires invoking the `matchmaker` function. The
+function can be executed without supplying any arguments (i.e.,
+`matchmaker()`), but is is probably easier and faster to supply initial
+values for the `p`, `data1`, `data2`, `data_id1`, and `data_id2`
+arguments. In turn:
+
+1.  `p` must be a data.frame of pairs for manual evaluation. The input
+    must have at least two columns `id1` and `id2` which uniquely
+    identify a record and references a row in the data inputs.
+2.  `data1` and `data2` are data.frames with similar variables (both
+    name and content) that describe a record (e.g., first name, last
+    name, ZIP). One of the columns (that doesn’t have to match with the
+    other) is an ID column that can be referenced to either the `id1` or
+    `id2` column in `p`.
+3.  `data_id1` and `data_id2` are the names for columns in `data1` and
+    `data2` that can serve as a merge variable to `id1` and `id2` in `p`
 
 ``` r
 hyrule::matchmaker(
