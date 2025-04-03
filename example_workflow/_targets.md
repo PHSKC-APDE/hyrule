@@ -29,11 +29,14 @@ workflow](https://books.ropensci.org/targets/). While it is designed to
 be a runnable pipeline, the primary goal of this example is to provide
 ideas and show options that others can adapt to their own projects.
 
-The pipeline and methods described below are heavily influenced by the
-New Opportunities for Health and Resilience Measures for Suicide
-Prevention (NO HARMS) grant pipeline (funded by CDC, implemented by
-Public Health - Seattle & King County), but are intended to be more
-generalized and flexible.
+The pipeline and methods described below are heavily influenced by
+analysis pipeline constructed for the New Opportunities for Health and
+Resilience Measures for Suicide Prevention (NO HARMS) project (funded by
+CDC, implemented by Public Health - Seattle & King County). Other major
+influences include the [Washington State Department of
+Health](https://doh.wa.gov/sites/default/files/2024-01/422261-COVIDCaseVaccineRecordLinkage.pdf)
+and the [Splink
+package](https://moj-analytical-services.github.io/splink/index.html).
 
 ## On this implementation
 
