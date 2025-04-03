@@ -29,29 +29,28 @@ workflow](https://books.ropensci.org/targets/). While it is designed to
 be a runnable pipeline, the primary goal of this example is to provide
 ideas and show options that others can adapt to their own projects.
 
-The funding and inspiration for this document derives from the NO HARMS
-grant conducted at Public Health - Seattle & King County and funded by
-the CDC. The pipeline and methods described below are heavily influenced
-by the New Opportunities for Health and Resilience Measures for Suicide
-Prevention (NO HARMS) pipeline, but are intended to be more generalized
-and flexible.
+The pipeline and methods described below are heavily influenced by the
+New Opportunities for Health and Resilience Measures for Suicide
+Prevention (NO HARMS) grant pipeline (funded by CDC, implemented by
+Public Health - Seattle & King County), but are intended to be more
+generalized and flexible.
 
 ## On this implementation
 
-While this example pipeline demonstrates a classic linkage between two
-datasets, the methods can be applied to any number of datasets. The NO
-HARMS project from which this pipeline comes from linked and
-deduplicated \>10 administrative datasets of varying size and data
-density.
+While this pipeline demonstrates a linkage between two datasets, the
+methods can be applied to any number of datasets. For example, the NO
+HARMS project from linked and deduplicated \>10 administrative datasets
+of varying size and data completeness.
 
 The number of input datasets can be scaled up infinitely (contingent on
 computational constraints), although there is a potentially trade-off
 between standardization and accuracy – as a multi-dataset model may have
-a lower ceiling than a series of 1:1 dataset models. On the other hand,
-a multi-dataset approach more naturally allows for the application of
-relationships “learned” from a high data density datasets to lower
-density ones. Also, one big model is likely easier to implement and run
-than a bunch of smaller specialized ones.
+a lower accuracy ceiling than a series of 1:1 dataset models due to
+customization constraints. On the other hand, a multi-dataset approach
+more naturally allows for the application of relationships “learned”
+from a high data density datasets to lower density ones. Also, one big
+model is likely easier to implement and run than a bunch of smaller
+specialized ones.
 
 A single dataset being linked against itself is a method of
 deduplication.
@@ -89,15 +88,15 @@ description of record linkage and its variations.
     match score. In the ideal case, each model will be good at a
     particular part of the overall problem, and then the whole of the
     models will be greater than the sum of the parts (or at least,
-    better than an individual part). If nothing else, probabilistic
-    approaches can be used within an overall ensemble.
+    better than the best individual part). If nothing else,
+    probabilistic approaches can be used within an overall ensemble.
 3.  Any good record linkage project is going to require some manner of
     verifying if the resulting match determinations are any good (e.g.,
-    is A a link to B). Since the “hassle” of creating a manually labeled
-    training dataset already needs to get done – users might as well
-    consider fitting some models on it. In practice, only a few hundred
-    labeled pairs (maybe 2 - 3 hours of work) is required to get a
-    ensemble up and running.
+    is A linked to B?). Since the “hassle” of creating a manually
+    labeled training dataset already needs to get done – users might as
+    well consider fitting some models on it. In practice, only a few
+    hundred labeled pairs (maybe 2 - 3 hours of work) is required to get
+    a good ensemble going (a rough draft will require less).
 
 ### Useful Concepts
 
@@ -108,7 +107,7 @@ methodological concepts:
     [targets](https://books.ropensci.org/targets/) and
     [`tarchetypes`](https://docs.ropensci.org/tarchetypes/) to
     orchestrate the linkage pipeline. A targets pipeline is a directed
-    acyclic graph that articulates how inputs, intermediate steps, and
+    acyclic graph that organizes how inputs, intermediate steps, and
     outputs all interact/flow into each other. Once the pipeline is
     specified, the targets package uses static code analysis (and other
     tricks) to determine how to keep the pipeline internally consistent
@@ -125,7 +124,7 @@ methodological concepts:
     [`arrow`](https://arrow.apache.org/docs/r/) package (along with
     `duckdb`) provides read/write routines for `.parquet` files.
     `.parquet` files are used because they are reasonably efficient
-    storage wise and allow for partial read/writes.
+    storage wise and allow for partial read/write operations.
 3.  [stacking/ensemble
     learning](https://en.wikipedia.org/wiki/Ensemble_learning): The
     linkage method is an ensemble of machine learning models combined
@@ -144,8 +143,8 @@ methodological concepts:
     [`workflows`](https://workflows.tidymodels.org/),
     [`tune`](https://tune.tidymodels.org/),
     [`stacks`](https://stacks.tidymodels.org/), and
-    [`yardstick`](https://yardstick.tidymodels.org/)`)` of packages are
-    used to implement the algorithms
+    [`yardstick`](https://yardstick.tidymodels.org/)`)` are used to
+    implement the algorithms
 4.  Networks/clusters: Collections of 1:1 matches (i.e., when we think
     two records are the same person) may aggregate into full-fledged
     networks (i.e., we think several records are the same person) and
@@ -358,9 +357,10 @@ flavors:
     happens only sporadically. These identifiers (or some similar
     subset) represent the core of a record and are often the basis for
     blocking criteria.
-2.  Secondary identifiers are things like address, ZIP code, and phone
-    number. These are things that may change with regularity and where
-    the temporal characteristics of their appearance may be informative.
+2.  Secondary identifiers are things like address, ZIP code, email
+    address, and phone number. These are things that may change
+    regularly, have multiple observations (e.g., work and personal
+    email), and/or feature informative temporal characteristics .
 3.  Contextual variables are all other things that may be used for
     determining whether record A represents the same entity as record B.
     Some examples may include: household size, term frequency
