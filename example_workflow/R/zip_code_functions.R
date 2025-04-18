@@ -23,8 +23,12 @@ format_zip_centers = function(input, output, zip_code_col){
   ans = as.data.table(ans)[, .(X,Y)]
   ans[, zip_code := clean_zip_code(i[[zip_code_col]])]
 
-  arrow::write_parquet(ans, output)
+  if(!is.null(output)){
+    arrow::write_parquet(ans, output)
+    return(output)
+  }else{
+    return(ans)
+  }
 
-  return(output)
 }
 

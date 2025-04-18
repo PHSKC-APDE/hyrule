@@ -26,9 +26,14 @@ create_frequency_table = function(tables, columns, output_folder){
     r = setDT(dbGetQuery(ddb, q))
     r[, paste0(nm, '_freq') := round((N-min(N)) / (max(N) - min(N)),4)]
 
-    out = file.path(output_folder, paste0(nm, '_freq', '.parquet'))
-    arrow::write_parquet(r, out)
-    out
+    if(!is.null(output_folder)){
+      out = file.path(output_folder, paste0(nm, '_freq', '.parquet'))
+      arrow::write_parquet(r, out)
+      return(out)
+    }else{
+      return(r)
+    }
+
 
 
   })

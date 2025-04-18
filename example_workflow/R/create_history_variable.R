@@ -40,8 +40,13 @@ create_location_history = function(input, output_file = NULL, id_cols, geom = NU
     stop('X and Y OR geom must be specified')
   }
 
-  arrow::write_parquet(ans, output_file)
-  return(output_file)
+  if(!is.null(output_file)){
+    arrow::write_parquet(ans, output_file)
+    return(output_file)
+  }else{
+    return(ans)
+  }
+
 }
 
 #' Create a history variable
@@ -77,7 +82,11 @@ create_history_variable = function(input, output_file = NULL, id_cols, variable,
   if(!missing(clean_function)) d[, (variable) := clean_function(get(variable))]
 
   d = na.omit(d)
+  if(!is.null(output_file)){
+    arrow::write_parquet(d, output_file)
+    return(output_file)
+  }else{
+    return(d)
+  }
 
-  arrow::write_parquet(d, output_file)
-  return(output_file)
 }

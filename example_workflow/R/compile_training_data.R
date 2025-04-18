@@ -77,8 +77,13 @@ compile_training_data = function(input,
 
   fitme[, pair := factor(pair, 0:1, as.character(0:1))]
   setorder(fitme, id1, id2)
-  arrow::write_parquet(fitme, output_file)
-  output_file
+  if(!is.null(output_file)){
+    arrow::write_parquet(fitme, output_file)
+    return(output_file)
+  }else{
+    return(fitme)
+  }
+
 
 }
 
@@ -92,9 +97,14 @@ split_tt = function(hash, training_data, fraction = .15, train_of, test_of){
   d = setDT(read_parquet(training_data))
   idx = sample(seq_len(nrow(d)),size = floor(nrow(d) * fraction))
 
-  arrow::write_parquet(d[idx,], test_of)
-  arrow::write_parquet(d[-idx,], train_of)
+  if(!is.null(train_of) && !is.null(test_of)){
+    arrow::write_parquet(d[idx,], test_of)
+    arrow::write_parquet(d[-idx,], train_of)
+    return(c(test = test_of,train = train_of))
 
-  return(c(test = test_of,
-           train = train_of))
+  }else{
+    return(list(test = d[idx,], train = d[-idx]))
+  }
+
+
 }

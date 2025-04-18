@@ -41,7 +41,11 @@ fixed_links = function(data, model_path, fixed_vars = c('source_system', 'source
   fixins[, final := 1]
   fixins[id1>id2, c('id1', 'id2') := list(id2, id1)]
 
-  arrow::write_parquet(fixins, output_file)
+  if(!is.null(output_file)){
+    arrow::write_parquet(fixins, output_file)
+    output_file
+  }else{
+    return(fixins)
+  }
 
-  output_file
 }

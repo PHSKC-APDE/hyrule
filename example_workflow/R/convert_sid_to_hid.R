@@ -21,7 +21,12 @@ convert_sid_to_hid = function(pairs, ..., output_file){
   # ans = merge(ans, r, by = c('id1', 'id2'))
   ans = ans[, .(id1 = hid1, id2 = hid2, pair)]
 
-  arrow::write_parquet(ans, output_file)
+  if(!is.null(output_file)){
+    arrow::write_parquet(ans, output_file)
 
-  output_file
+    output_file
+  }else{
+    return(ans)
+  }
+
 }
