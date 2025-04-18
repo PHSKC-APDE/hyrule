@@ -5,83 +5,16 @@ input_2_7c77361bdd0c8c24|branch|b30f66c72bf9d207|d7fe20d40de124a9|2c530c1562a7fb
 input_2|pattern|57d263a8814545ad|d7fe20d40de124a9||1957396967||||263305|file|local|vector||input_2_7c77361bdd0c8c24|0||
 input_1_94b857a19c8b8d1a|branch|72a18b955a480068|a8dd924a58bf79a4|2c530c1562a7fbd1|-697062746|../data-raw/fake_one.parquet|t20126.9013902s|s260435b|260435|file|local|vector|input_1||0||
 input_1|pattern|485ea3fdc9bea4d7|a8dd924a58bf79a4||1132990201||||260435|file|local|vector||input_1_94b857a19c8b8d1a|0||
-zh|stem|ea8e05b8fce004c2|7ba67010115f1d8c|60dfce7d57d91e1d|-825922256|output//zh.parquet|t20145.6754117256s|s74023b|74023|file|local|vector|||0.25||
-lh|stem|728e950aec9e647e|3557cab83548305e|eefb5e68f3249191|-473705197|output//lh.parquet|t20145.6754316675s|s148020b|148020|file|local|vector|||0.047||
 training_hash|stem|741a0b26877d0965|77e8f60989f10d3b|d4f040c278e16b40|907826911||t20145.6754578947s|s84b|84|rds|local|vector|||0.016||
-test_train_split|stem|a975d82c373779df|904b149335f29969|d07e23932ce237ee|-84026540|output//test.parquet*output//train.parquet|t20145.6754586682s|s72112b|72112|file|local|vector|||0.047||
-screener|stem|7cd30ea6338125b9|c57146e7609078ff|3b9b5d65842a6e72|-1654843585||t20145.6754887335s|s47600b|47600|rds|local|vector|||2.563|No value of metric was given mn_log_loss will be used.|
-tfolds|stem|c2d39e3b9d314400|eae7740b2e9279e6|c7449ed817127a6e|-1781341949||t20145.6754892823s|s98817b|98817|rds|local|vector|||0.016||
-submod_svm|stem|fc1348c8a9fecae5|73dd11350c510c05|b92196e2b5ba82b8|63961196||t20145.6762732665s|s2556127b|2556127|rds|local|vector|||67.422||
-submod_rf|stem|8fe3f17340ea2c78|8d5ab9b1a2728ada|259523e02ed1a04d|564792284||t20145.6770376909s|s1280705b|1280705|rds|local|vector|||65.875||
-submod_xg|stem|ebf9fa5e1dd6738b|98ca0cc705a83863|d2905a9fdbf8b165|-1392203269||t20145.6795095255s|s1228211b|1228211|rds|local|vector|||213.375||
-model|stem|54dcead194a5aa3d|7e7cfaff814ade26|c4556ebd9cca7a94|808688450||t20145.6796880369s|s915531b|915531|rds|local|vector|||15.281||
-model_path|stem|54dcead194a5aa3d|fb3072c76cdbd698|a9911aeda3b037aa|-470656295|output//model.rds|t20145.6796899075s|s915531b|915531|file|local|vector|||0.109||
-cv_co_1|stem|8b074dbc84792c1f|ac13886b9c779bdf|b9492ce899280b5f|1733758491||t20145.6809499053s|s30267b|30267|rds|local|vector|||99.063|Invalid .internal.selfref detected and fixed by taking a shallow copy of the data.table so that  can add this new column by reference. At an earlier point, this data.table has been copied by R or was created manually using structure or similar. Avoid names and attr which in R currently and oddly may copy the whole data.table. Use set syntax instead to avoid copying set, setnames and setattr. If this message doesnt help, please report your use case to the data.table issue tracker so the root cause can be fixed or this message improved.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.|
-cv_co_2|stem|0f64fa8518fe94a3|be18b25c9f15b636|b9492ce899280b5f|-1805689767||t20145.6820888171s|s30328b|30328|rds|local|vector|||98.375|Invalid .internal.selfref detected and fixed by taking a shallow copy of the data.table so that  can add this new column by reference. At an earlier point, this data.table has been copied by R or was created manually using structure or similar. Avoid names and attr which in R currently and oddly may copy the whole data.table. Use set syntax instead to avoid copying set, setnames and setattr. If this message doesnt help, please report your use case to the data.table issue tracker so the root cause can be fixed or this message improved.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.|
-cv_co_3|stem|8fca498523874680|3e69a4530cf8d22c|b9492ce899280b5f|1280366026||t20145.6832116342s|s30332b|30332|rds|local|vector|||96.984|Invalid .internal.selfref detected and fixed by taking a shallow copy of the data.table so that  can add this new column by reference. At an earlier point, this data.table has been copied by R or was created manually using structure or similar. Avoid names and attr which in R currently and oddly may copy the whole data.table. Use set syntax instead to avoid copying set, setnames and setattr. If this message doesnt help, please report your use case to the data.table issue tracker so the root cause can be fixed or this message improved.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.. No value of metric was given mn_log_loss will be used.|
-cutme|stem|8869dfd3f9b9d096|61173c7b3d07dc4c|0ce3c028b0eb5668|-1547687582||t20145.683218463s|s587b|587|rds|local|vector|||0.422||
-cutme_path|stem|8869dfd3f9b9d096|1796593a56ad11d1|ab9f2d784e2ddfa9|957486785|output//cutme.rds|t20145.6832187176s|s587b|587|file|local|vector|||0||
 data|stem|8b6bcf3e8b19788b|8b42f0cb69300a04|78be718cfa7bd948|33550471|output//data.parquet|t20147.9919049499s|s598917b|598917|file|local|vector|||13.719||
 blocks_356b9dadbcff1452|branch|8c8f9e91a0391c9a|f75c8aa3e21825de|bedc25a56f9640d9|-769336686|output//qry_1.parquet|t20147.9920332614s|s488574b|488574|file|local|vector|blocks||11.046||
 blocks_f424f41de204ce7f|branch|714076faac2ded1c|f75c8aa3e21825de|bedc25a56f9640d9|2124681677|output//qry_2.parquet|t20147.9920346253s|s109894b|109894|file|local|vector|blocks||0.094||
 blocks_c51bf613ee23b651|branch|ed81988ca70911b5|f75c8aa3e21825de|bedc25a56f9640d9|-1272919360|output//qry_3.parquet|t20147.9920393077s|s362027b|362027|file|local|vector|blocks||0.375||
-freqs|stem|9a6e9a1b3ec558a5|5ffe77ddf5465dff|d214a4f4141b2579|1468531720|output//first_name_noblank_freq.parquet*output//last_name_noblank_freq.parquet*output//dob_clean_freq.parquet|t20147.9920428821s|s131823b|131823|file|local|vector|||0.282||
-train_input|stem|5962b144c7c6fc3a|6cc23cd4aa98280e|7f87fff18ecb2b8f|-739425196|output//training.parquet|t20147.9920453693s|s48261b|48261|file|local|vector|||0.203||
-train_test_data|stem|88d8036206ac660c|7184105c30be9fe9|9b5c2709d8885af9|1408466605||t20147.9920568307s|s83b|83|rds|local|vector|||0.766||
-preds_481ca52971af34ce|branch|09305863bb32cf40|01c4c433a815b933|fd63ef9a3893ef3f|-589027240|output//preds_blk_1.parquet|t20147.9920901819s|s468917b|468917|file|local|list|preds||2.813||
-preds_ea50bfd4254862b6|branch|abe851763e935f8d|01c4c433a815b933|fd63ef9a3893ef3f|-486237201|output//preds_blk_2.parquet|t20147.992117808s|s468613b|468613|file|local|list|preds||2.359||
-preds_c1c5987ab5dbb8f2|branch|c514e1ea4652d90a|01c4c433a815b933|fd63ef9a3893ef3f|855298524|output//preds_blk_3.parquet|t20147.9921490873s|s471296b|471296|file|local|list|preds||2.687||
-preds_b2b4b8a0d0ef331b|branch|bba319441cf2a486|01c4c433a815b933|fd63ef9a3893ef3f|598610262|output//preds_blk_4.parquet|t20147.9921752847s|s451350b|451350|file|local|list|preds||2.219||
-preds|pattern|901958d73cd73820|01c4c433a815b933||150387013||||1860176|file|local|list||preds_481ca52971af34ce*preds_ea50bfd4254862b6*preds_c1c5987ab5dbb8f2*preds_b2b4b8a0d0ef331b|10.078||
-fixed|stem|e589f873eb66e479|d3bbf765dccba8f1|e0f82eec17db28ad|302986174|output//fixed_links.parquet|t20147.9921771934s|s3643b|3643|file|local|vector|||0.125||
 qgrid|stem|04e0a43cc08ab2af|cdbbeea6443788d0|eba07987498dfd05|261574596||t20152.9275468465s|s404b|404|rds|local|group||qgrid_79d00c04cd7a9981*qgrid_a835c7a064338ac6*qgrid_c0d486da5c496a9c|9.968||
 blocks_0930dd217e07c294|branch|ed81988ca70911b5|f75c8aa3e21825de|bedc25a56f9640d9|-684748544|output//qry_3.parquet|t20152.927552875s|s362027b|362027|file|local|vector|blocks||0.422||
 blocks|pattern|b98a7e7f6113d1b1|f75c8aa3e21825de||-673168198||||362027|file|local|vector||blocks_356b9dadbcff1452*blocks_f424f41de204ce7f*blocks_0930dd217e07c294|0.422||
 bids|stem|870aa13db5bd753f|0fa413e7bcc130e2|f001361d7be9ae5f|1807369988|output//blk_1.parquet*output//blk_2.parquet*output//blk_3.parquet*output//blk_4.parquet|t20152.9275560475s|s1622979b|1622979|file|local|vector|||0.234||
 bid_files|stem|fc1707de8d737942|206863ba0c7cfbb9|599c18fcd7aa3d1a|-1206622428||t20152.927556318s|s84b|84|rds|local|vector||bid_files_e82392b70819d3e0*bid_files_f7675393ebeaadb9*bid_files_f8c2bfa1655db7dd*bid_files_b927e33c134581a9|0||
-components|stem|f4be0a5c44ccb143|2d051deca6b79e91|c4005c98a9926a1f|983003680|output//cids.parquet*output//ovr_sum.parquet|t20171.723404572s|s364932b|364932|file|local|vector|||1.906||
-blocking_rules|object|b2a6cd1c768d3cf5|||||||||||||||
-loadspatial|function|e858e5685a98e380|||||||||||||||
-clean_zip_code|function|74bbdbece1f16710|||||||||||||||
-xg|object|b0ad707c00919dc4|||||||||||||||
-parquet_to_ddb|function|a8b986fdff7e3fe4|||||||||||||||
-svm|object|6dfcd694d36f5fe4|||||||||||||||
-cv_cutoffs|object|8c56dc966569d55c|||||||||||||||
-create_stacked_model|function|0454e588ffc945d1|||||||||||||||
-split_tt|function|51cc2737d2eddbfd|||||||||||||||
-compile_blocks|function|d51bd0efe024ad51|||||||||||||||
-create_location_history|function|94ceed53bfa9dced|||||||||||||||
-fit_screening_model|function|a0c79cd3a3c37d21|||||||||||||||
-convert_sid_to_hid|function|1ea62e4bc9d59b7d|||||||||||||||
-i|object|1383ef88fd9bbb0e|||||||||||||||
-create_history_variable|function|8675d41ae486bd18|||||||||||||||
-f|object|511563371c6ed3e2|||||||||||||||
-load_target|function|f775697c691d0595|||||||||||||||
-s_params|object|6420598406f1bee1|||||||||||||||
-fixed_links|function|979d55f5c2a1364f|||||||||||||||
-vis_network|function|48d54fd626d76b28|||||||||||||||
-cv_refit|function|70e04fde130e652d|||||||||||||||
-make_folds|function|b6fa49f2843fb198|||||||||||||||
-submods|object|5d59f2bee4ef1b49|||||||||||||||
-compile_links|function|c0d98d5fbf50819b|||||||||||||||
-cutoff_df|object|ea625421def04a9a|||||||||||||||
-rf|object|5f73ee68aceed99f|||||||||||||||
-fit_submodel|function|7157d8e468f1912d|||||||||||||||
-outdir|object|6fd0e7938c0ccd23|||||||||||||||
-bounds|object|e6380cb90705b92c|||||||||||||||
-init_data|function|be266753c8d5c114|||||||||||||||
-apply_screen|object|988c41ba10911dc8|||||||||||||||
-make_block|function|5712f44c07e06451|||||||||||||||
-make_block_rules|function|e23c5e7b6cd75cb8|||||||||||||||
-make_model_frame|function|553752410ead9954|||||||||||||||
-format_zip_centers|function|e0420bab5d372a0a|||||||||||||||
-retrieve_network_info|function|4b600723f17d01e1|||||||||||||||
-create_frequency_table|function|948d5be18f001d00|||||||||||||||
-load_parquet_to_ddb_table|function|99f8e1e2543e108d|||||||||||||||
-combine_cutoffs|function|2aff013ddaff8d11|||||||||||||||
-identify_cutoff|function|2aff013ddaff8d11|||||||||||||||
-predict_links|function|17c4084dc3794c1d|||||||||||||||
-compile_training_data|function|a91fc38cbc2226b5|||||||||||||||
 blocking_rules|object|b2a6cd1c768d3cf5
 loadspatial|function|e858e5685a98e380
 clean_zip_code|function|74bbdbece1f16710
@@ -144,3 +77,8 @@ preds_b2b4b8a0d0ef331b|branch|d971af1ac26287b1|01c4c433a815b933|8913c85a4e27c0e6
 preds|pattern|d1b72864b285ca05|01c4c433a815b933||150387013||||1119857|file|local|list||preds_481ca52971af34ce*preds_ea50bfd4254862b6*preds_c1c5987ab5dbb8f2*preds_b2b4b8a0d0ef331b|5.234||
 cv_co_1|stem|6e4bb596092eac87|ac13886b9c779bdf|b517b8986e745110|1733758491||t20196.6753561973s|s30036b|30036|rds|local|vector|||65.765|Invalid .internal.selfref detected and fixed by taking a shallow copy of the data.table so that  can add this new column by reference. At an earlier point, this data.table has been copied by R or was created manually using structure or similar. Avoid names and attr which in R currently and oddly may copy the whole data.table. Use set syntax instead to avoid copying set, setnames and setattr. If this message doesnt help, please report your use case to the data.table issue tracker so the root cause can be fixed or this message improved.|
 cv_co_2|stem|4c3840fa45f6e1b3|be18b25c9f15b636|b517b8986e745110|-1805689767||t20196.6761544656s|s30153b|30153|rds|local|vector|||68.937|Invalid .internal.selfref detected and fixed by taking a shallow copy of the data.table so that  can add this new column by reference. At an earlier point, this data.table has been copied by R or was created manually using structure or similar. Avoid names and attr which in R currently and oddly may copy the whole data.table. Use set syntax instead to avoid copying set, setnames and setattr. If this message doesnt help, please report your use case to the data.table issue tracker so the root cause can be fixed or this message improved.|
+cv_co_3|stem|3f307836acd5f14a|3e69a4530cf8d22c|b517b8986e745110|1280366026||t20196.6769012059s|s30162b|30162|rds|local|vector|||64.485|Invalid .internal.selfref detected and fixed by taking a shallow copy of the data.table so that  can add this new column by reference. At an earlier point, this data.table has been copied by R or was created manually using structure or similar. Avoid names and attr which in R currently and oddly may copy the whole data.table. Use set syntax instead to avoid copying set, setnames and setattr. If this message doesnt help, please report your use case to the data.table issue tracker so the root cause can be fixed or this message improved.|
+fixed|stem|2b86a3e6e9ead8df|d3bbf765dccba8f1|70f5660cb0ace1af|302986174|output//fixed_links.parquet|t20196.6769035825s|s3171b|3171|file|local|vector|||0.172||
+cutme|stem|12c1c53c1d513870|61173c7b3d07dc4c|660d7dc7313714b0|-1547687582||t20196.6769092964s|s541b|541|rds|local|vector|||0.469||
+cutme_path|stem|12c1c53c1d513870|1796593a56ad11d1|a0b54278f622d184|957486785|output//cutme.rds|t20196.6769096956s|s541b|541|file|local|vector|||0||
+components|stem|51c3d66378eb2a16|2d051deca6b79e91|94d6f04936216e16|983003680|output//cids.parquet*output//ovr_sum.parquet|t20196.6769349802s|s315104b|315104|file|local|vector|||2.172||
