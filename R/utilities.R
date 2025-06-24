@@ -66,6 +66,7 @@ remove_spaces = function(x) gsub(' ', '', x, fixed = T)
 
 #' Replace NA with blanks ('')
 #' @param x a character vector (or something to be converted to character)
+#' @keywords internal
 nb = function(x) {
   x = as.character(x)
   x[is.na(x)] <- ''
