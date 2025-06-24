@@ -5,9 +5,9 @@
 #' @param opts list. Option arguments to be passed on to predict.model_stack which passes it on to the prediction routines of the underlying ensemble
 #' @param ... not implemented
 #' @details predict.hyrule_link always requests "prob" type from predict.model_stack
-#' @export
 #' @importFrom stats predict
-#' @exportS3Method stats::predict hyrule_link
+#' @method predict hyrule_link
+#' @export
 predict.hyrule_link = function(object, new_data, members = F, opts = list(), ...){ # type = 'prob',
 
   stopifnot(is.data.frame(new_data))

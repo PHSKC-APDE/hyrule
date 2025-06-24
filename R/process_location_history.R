@@ -9,6 +9,8 @@
 #' `exact_location` is a binary flag indicating that the pair has at least one geocoded location within 3 meters.
 #' `min_loc_distance` is the minimum distance observed between a record pair in meters
 #'
+#' @keywords internal
+#'
 #' @importFrom sf st_geometry_type st_centroid st_distance st_as_sf
 #' @importFrom data.table set data.table as.data.table
 #' @importFrom units set_units drop_units

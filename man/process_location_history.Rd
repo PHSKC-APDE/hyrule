@@ -25,3 +25,4 @@ Given record pairs and location histories, this function returns a data.table(id
 `exact_location` is a binary flag indicating that the pair has at least one geocoded location within 3 meters.
 `min_loc_distance` is the minimum distance observed between a record pair in meters
 }
+\keyword{internal}

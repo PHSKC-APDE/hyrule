@@ -6,6 +6,9 @@
 #' @param ph2 data.frame/data.table with (at least) two columns: `id2` and phone_number. A given id can have multiple numbers associated with it. Ideally, includes the whole phone history and not just those limited to `pairs`
 #' @param default_phone_dist numeric. Default dl (see stringdist::stringdist) distance when one of a pair of numbers is missing
 #' @param default_mxn numeric. Default max N at number value when missing. Represent number of people associated with phone number. Default value of 1.5 is chosen arbitrarily
+#'
+#' @keywords internal
+#'
 #' @importFrom data.table setnames
 #' @importFrom stringr str_replace_all
 #' @importFrom stringdist stringdist
