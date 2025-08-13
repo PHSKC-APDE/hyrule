@@ -40,6 +40,7 @@ clean_names = function(x, bad_names = c()){
   # More triming
   y = trimws(y)
 
+  bad_names = c('', bad_names)
   y[y%in%bad_names] <- NA
 
   y

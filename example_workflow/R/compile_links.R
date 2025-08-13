@@ -15,12 +15,6 @@ compile_links = function(..., data, id_col = 'clean_hash', cutpoint, output_fold
       r
     })
     links = rbindlist(links)[, .(id1, id2, weight = final)]
-  }else if(inherits(dots[[1]], 'Id')){
-    con = hhsaw()
-    on.exit(dbDisconnect(con))
-
-    links = setDT(dbGetQuery(con, glue::glue_sql('select id1, id2, final as weight from {`dots[[1]]`} where final>= {cutpoint}', .con = con)))
-
   }else{
     links = dots[[1]][final >= cutpoint, .(id1, id2, weight = final)]
   }
@@ -57,10 +51,12 @@ compile_links = function(..., data, id_col = 'clean_hash', cutpoint, output_fold
 
   # step 1.5, compute some initial statistics
   decomp = igraph::decompose(g)
+  names(decomp) <- as.character(seq_along(decomp))
 
   # decomp = lapply(seq_along(decomp), function(x) graph_attr(decomp[[x]], 's1_id') = x )
   s1_density = vapply(decomp, edge_density, .1)
   s1_len = vapply(decomp, length, 1)
+  s1_density[is.na(s1_density) & s1_len == 1] <- 1
   s1_sum = data.table(s1_comp_id = as.character(seq_along(s1_density)), s1_density = round(s1_density, 3), s1_size = s1_len)
 
   # Step 2, do some light clustering
@@ -86,21 +82,21 @@ compile_links = function(..., data, id_col = 'clean_hash', cutpoint, output_fold
   }
 
   clusme = which(s1_len>=min_N & s1_density <= max_density)
+  if(length(clusme) >0){
+    reclus = lapply(decomp[clusme], clusterer, recursive = recursive)
+    names(reclus) <- as.character(clusme)
 
-  reclus = lapply(decomp[clusme], clusterer, recursive = recursive)
-  names(reclus) <- as.character(clusme)
+    # flatten
+    iter = 0
+    while(!all(vapply(reclus, is.igraph, T)) & iter <10){
+      reclus = purrr::list_flatten(reclus)
+      iter = iter + 1
+    }
+    # combine
 
-  # flatten
-  iter = 0
-  while(!all(vapply(reclus, is.igraph, T)) & iter <10){
-    reclus = purrr::list_flatten(reclus)
-    iter = iter + 1
+    decomp = decomp[-clusme]
+    decomp = append(decomp, reclus)
   }
-
-  # combine
-  names(decomp) <- as.character(seq_along(decomp))
-  decomp = decomp[-clusme]
-  decomp = append(decomp, reclus)
 
   # Create the initial pass of component summaries as data frames
   cids = lapply(seq_along(decomp), function(i){

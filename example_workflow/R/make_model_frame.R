@@ -132,7 +132,7 @@ make_model_frame = function(pairs, data, lh, zh, ft_first, ft_last, ft_dob){
                  ,ads as ({el_cte})
                  select
                  dt.*
-                 ,least(zt.zip_overlap, 0) as zip_overlap
+                 ,greatest(zt.zip_overlap, 0) as zip_overlap
                  ,if(at.ah_min_distance <10, 1 , 0) as exact_location
                  ,if(zt.zip_overlap IS NULL OR zt.zip_overlap<0, 1, 0) as missing_zip
                  ,if(at.ah_min_distance IS NULL, 1, 0) as missing_ah
